@@ -1,0 +1,5 @@
+name="p0"
+description="Simple monadic parsing with continuations"
+version="??"
+archive(byte)="p0.cma"
+archive(native)="p0.cmxa"
