@@ -7,6 +7,10 @@ all:
 	-ocamlfind remove $(libname)
 	ocamlfind install $(libname) META *.cmi *.o *.a *.cma *.cmxa *.cmo *.cmx 
 
+# uses the installed library
+example:
+	ocamlfind ocamlopt -package p0 -linkpkg p0_example.ml
+
 clean:
 	rm -f *.{cmi,cmo,cmx,o,a,cmxa,cma}
 

@@ -1,4 +1,3 @@
 * p0: simple monadic parsing with continuations
 
-For an example of use, see
-https://github.com/tomjridge/example_grammars/blob/master/src/ocaml_2017.ml
+For an example of use, see file ~p0_example.ml~
