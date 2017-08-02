@@ -74,14 +74,14 @@ end
 
 let g = {|
 
-
+S -> ?w SS ?w ?eof;
 
 (* the expressions we want to parse at top-level *)
-S -> ?w DEFN ?w ?eof
-| ?w TYPEDEFINITIONS ?w ?eof
-| ?w TYPEXPR ?w ?eof
-| ?w "e:" EXPR ?w ?eof
-| ?w "val" ?w EXPR ?w ":" ?w TYPEXPR ?w ?eof
+SS -> DEFN
+| TYPEDEFINITIONS
+| TYPEXPR
+| "e:" EXPR
+| "val" ?w EXPR ?w ":" ?w TYPEXPR
 ;
 
 DEFN -> 
@@ -97,7 +97,7 @@ TYPEDEFINITIONS -> TYPEDEFINITION
 (* var names: DEFN d; TYPEDEFINITIONS tds; *)
 
 
-(* 6.3 Names *)
+(* 6.3 Names -------------------------------------------------------- *)
 
 VALUENAME -> ?ident;
 
@@ -124,7 +124,9 @@ VALUEPATH -> VALUENAME
   | MODULEPATH "." VALUENAME    
 ;
 
-(* this was ?ident but we don't want List.map interpreted as CONSTR.FIELDNAME *)
+(* this was ?ident but we don't want List.map interpreted as
+CONSTR.FIELDNAME *)
+
 CONSTR ->
     ?constr
 ;
@@ -134,9 +136,13 @@ MODULEPATH -> ?_Ident
 ;
 
 
-(* var names: VALUENAME vn; FIELDNAME fn; VALUEPATH vp; MODULEPATH mp *)
+(* var names: VALUENAME vn; FIELDNAME fn; VALUEPATH vp; MODULEPATH
+mp *)
 
-(* 6.4 Type expressions; following for type defns FIXME needs tidying up  *)
+(* 6.4 Type expressions --------------------------------------------- *)
+
+(* following for type defns FIXME needs tidying
+up *)
 
 TYPEXPR -> "'" ?ident
   | "(" ?w TYPEXPR ?w ")"
@@ -180,7 +186,7 @@ POLYTYPEXPR -> TYPEXPR
 (* var names FIXME *)
 
 
-(* 6.5 Constants *)
+(* 6.5 Constants ---------------------------------------------------- *)
 
 CONSTANT -> CONSTR
   | "[" ?w "]"
@@ -193,13 +199,17 @@ CONSTANT -> CONSTR
 
 
 
-(* 6.6 Patterns *)
+(* 6.6 Patterns ----------------------------------------------------- *)
 
 PATTERN -> EXPR
 ;
 
 
-(* 6.7 Expressions ; grammar is too ambiguous so we identify atomic expressions which can be arguments to functions *)
+(* 6.7 Expressions -------------------------------------------------- *)
+
+
+(* grammar is too ambiguous so we identify atomic
+expressions which can be arguments to functions *)
 
 EXPR -> ATEXPR
   | EXPR ":" TYPEXPR
@@ -285,7 +295,7 @@ FIELD ->
 ;
 
 
-(* 6.8 Type and exception definitions *)
+(* 6.8 Type and exception definitions ------------------------------- *)
 
 TYPEDEFINITION -> "type" ?w TYPEDEF
 ;
@@ -294,7 +304,8 @@ TYPEDEF -> TYPECONSTRNAME ?w TYPEINFORMATION
 
   | TYPECONSTRNAME ?w TYPEPARAMS ?w TYPEINFORMATION
 
-      (* FIXME what about params? may cause problems because hol lists params in order they occur in defn :( *)
+(* FIXME what about params? may cause problems because hol lists
+params in order they occur in defn :( *)
 ;
 
 TYPEPARAMS -> TYPEPARAM
@@ -345,7 +356,8 @@ FIELDDECLSA -> FIELDDECL
   | FIELDDECL ?w ";" ?w FIELDDECLSA
 ;
 
-(* FIXME the pattern is we map nonterms to strings; this causes lots of messing about with c and ^ *)
+(* FIXME the pattern is we map nonterms to strings; this causes lots
+of messing about with c and ^ *)
 
 FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR 
 
