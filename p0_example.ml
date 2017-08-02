@@ -403,7 +403,8 @@ and plus1 sofar = (* zero or more *)
 and plus2 sofar init = (
   opt (a"+") |>> function
   | Some _ -> plus1 (sofar@[init])  (* pass along accumulated terms *)
-  | None -> opt (a"*") |>> function
+  | None -> 
+    opt (a"*") |>> function
     | Some _ -> (
         (* parse a product *)
         times init |>> fun product -> 
@@ -421,5 +422,7 @@ and atomic s =
 
 and num = re"[0-9]+" |>> fun x -> return @@ `Int (int_of_string x)
 
-let _ = "1+2*3*4+5*6" |> plus1 [] |> function Some(x,_) -> 
+let _ = "1+2*3*4+5*6" |> plus1 [] |> function 
+  | Some(x,_) -> 
     assert (x = `Plus3 ([`Int 1; `Times [`Int 2; `Int 3; `Int 4]], `Times [`Int 5; `Int 6]))
+  | _ -> ()
