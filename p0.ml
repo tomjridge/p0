@@ -1,7 +1,8 @@
-(* a cleaned up version suitable for the newly-revamped p1 2017-07-01 *)
+(* monadic parser combinators *)
 
 (* worth working with indexes rather than strings? *)
 
+(* following extracted from tjr_lib to make this self-contained *)
 module Tjr_substring = struct
 
   module String_position = struct
@@ -102,23 +103,20 @@ let rec plus ~sep p =
   | None -> return [x]
   | Some (_,xs) -> return (x::xs)
 
+(*
 let save s = Some(s,s)
 
 (* jump back in time *)
 let restore s' s = Some((),s')
+*)
 
-(* a bit fiddly! *)
 let star ~sep p =
   opt p |>> function
   | None -> return []
   | Some x -> 
-    save |>> fun state ->
-    opt sep |>> function
-    | None -> restore state |>> fun _ -> return [x]
-    | _ -> 
-      opt (plus ~sep p) |>> function
-      | None -> restore state |>> fun _ -> return [x]
-      | Some xs -> return (x::xs)
+    opt (sep -- plus ~sep p) |>> function
+    | None -> return [x]
+    | Some (_,xs) -> return (x::xs)
 
 (* shortcut alternative *)
 let alt a b = 

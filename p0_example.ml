@@ -1,4 +1,4 @@
-(* a cleaned up version suitable for the newly-revamped p1 2017-07-01 *)
+(* a cleaned up version of ocaml grammar 2017 *)
 
 (* worth working with indexes rather than strings? *)
 
@@ -10,20 +10,28 @@ let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 (* ws: 0 or more; re is hopefully longest match (not true for Str) *)
 let rec ws s = (re "[ \n]*") --- (opt (comm --- ws)) @@ s
 let nt = re "[A-Z]+" 
-let tm = 
+let lit = 
   let sq = "'" in
   let dq = "\"" in
-  (a"?" -- re"[a-z_][a-zA-Z0-9]*" -- a"?") || 
-  (a sq -- upto_a sq -- a sq) ||
-  (a dq -- upto_a dq -- a dq) 
+  ((a sq -- upto_a sq -- a sq) ||
+  (a dq -- upto_a dq -- a dq))
+  |>> fun x -> return (_3 x)
+let tm = 
+  lit |>> (fun x -> return @@ `Lit x) ||
+  (* allow a single question mark for terminals *)
+  (a"?" -- re"[a-z_][a-zA-Z0-9]*") |>> fun (x,y) -> return @@ `Qu(x,y)
 let sym = 
   (nt |>> fun x -> return (`NT x)) || 
-  (tm |>> fun x -> return (`TM (_3 x)))
+  (tm |>> fun x -> return (`TM x))
+(*
 let var_eq = 
   let v = re "[a-z][a-z0-9]*" in
   let v_eq = v -- a"=" in
   opt v_eq -- sym |>> fun (v,s) -> return (v,s)
-let syms = plus ~sep:ws var_eq
+*)
+let syms = plus ~sep:ws sym
+(* let vnames = plus ~sep:(a",") (re"[a-z_][a-z0-9_]*")
+//let syms' = syms -- opt (ws -- a"//" -- opt (ws -- vnames)) *)
 let bar = ws -- a "|" -- ws 
 let rhs = plus ~sep:bar syms  (* plus and star are greedy *)
 let rule = 
@@ -58,28 +66,40 @@ end
 
 (* ocaml grammar ---------------------------------------------------- *)
 
+
+(* FIXME really the variable names tend to be created from the names
+   of the nonterminals/terminals involved eg w1 for first ?w, mp for
+   MODULEPATH etc; this suggests to optionally decorate each nt/tm
+   with a base var name *)
+
 let g = {|
 
+
+
 (* the expressions we want to parse at top-level *)
-S -> ?w? DEFN ?w? ?eof?
-| ?w? TYPEDEFINITIONS ?w? ?eof?
-| ?w? TYPEXPR ?w? ?eof?
-| ?w? "e:" EXPR ?w? ?eof?
-| w1=?w? "val" w2=?w? i=EXPR w3=?w? ":" w4=?w? ty=TYPEXPR ?w? ?eof?
+S -> ?w DEFN ?w ?eof
+| ?w TYPEDEFINITIONS ?w ?eof
+| ?w TYPEXPR ?w ?eof
+| ?w "e:" EXPR ?w ?eof
+| ?w "val" ?w EXPR ?w ":" ?w TYPEXPR ?w ?eof
 ;
 
-DEFN ->
-    "let" w1=?w? e1=LETBINDING
-  | "let" w0=?w? "rec" w1=?w? e1=LETBINDING
+DEFN -> 
+    "let" ?w LETBINDING 
+  | "let" ?w "rec" ?w LETBINDING 
 ;
 
-TYPEDEFINITIONS -> TYPEDEFINITION
-  | TYPEDEFINITION ?w? TYPEDEFINITIONS
+TYPEDEFINITIONS -> TYPEDEFINITION 
+  | TYPEDEFINITION ?w TYPEDEFINITIONS   
 ;
+
+
+(* var names: DEFN d; TYPEDEFINITIONS tds; *)
+
 
 (* 6.3 Names *)
 
-VALUENAME -> ?ident? ;
+VALUENAME -> ?ident;
 
 INFIXOP -> "="
   | "++"
@@ -98,54 +118,56 @@ INFIXOP -> "="
   | "|||"
 ;
 
-FIELDNAME -> ?ident? ;
+FIELDNAME -> ?ident ;
 
 VALUEPATH -> VALUENAME
-  | MODULEPATH "." VALUENAME
+  | MODULEPATH "." VALUENAME    
 ;
 
-(* this was ?Ident? but we don't want List.map interpreted as CONSTR.FIELDNAME *)
+(* this was ?ident but we don't want List.map interpreted as CONSTR.FIELDNAME *)
 CONSTR ->
-    ?constr?
+    ?constr
 ;
 
-MODULEPATH -> ?_Ident?
-  | MODULEPATH "." ?_Ident?
+MODULEPATH -> ?_Ident
+  | MODULEPATH "." ?_Ident
 ;
 
+
+(* var names: VALUENAME vn; FIELDNAME fn; VALUEPATH vp; MODULEPATH mp *)
 
 (* 6.4 Type expressions; following for type defns FIXME needs tidying up  *)
 
-TYPEXPR -> "'" ?ident?
-  | "(" w1=?w? t=TYPEXPR w2=?w? ")"
-  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR
-  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR
+TYPEXPR -> "'" ?ident
+  | "(" ?w TYPEXPR ?w ")"
+  | TYPEXPR ?w "->" ?w TYPEXPR
+  | TYPEXPR ?w "*" ?w TYPEXPR
   | TYPECONSTR
-  | s2=TYPECONSTR w1=?w? s1=TYPEXPRA
+  | TYPECONSTR ?w TYPEXPRA
 ;
 
 TYPEXPRA -> TYPEXPR
-  | TYPEXPR ?w? TYPEXPRA
+  | TYPEXPR ?w TYPEXPRA
 ;
 
-OCAMLTYPEXPR -> "'" ?ident?
-  | "(" w1=?w? t=TYPEXPR w2=?w? ")"
-  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR
-  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR
+OCAMLTYPEXPR -> "'" ?ident
+  | "(" ?w TYPEXPR ?w ")"
+  | TYPEXPR ?w "->" ?w TYPEXPR
+  | TYPEXPR ?w "*" ?w TYPEXPR
   | TYPECONSTR
-  | s1=TYPEXPR w1=?w? s2=TYPECONSTR
-  | "(" w1=?w? s1=TYPEXPRA w2=?w? ")" w3=?w? s2=TYPECONSTR
+  | TYPEXPR ?w TYPECONSTR
+  | "(" ?w TYPEXPRA ?w ")" ?w TYPECONSTR
 ;
 
 OCAMLTYPEXPRA -> TYPEXPR
-  | TYPEXPR ?w? "," ?w? TYPEXPRA
+  | TYPEXPR ?w "," ?w TYPEXPRA
 ;
 
 (*
-  | "(" ?w? TYPE ?w? ")"
-  | TYPE ?w? ?ident?
+  | "(" ?w TYPE ?w ")"
+  | TYPE ?w ?ident
   | MODULEPATH "." TYPEXPR
-  | TYPEXPR ?w? TYPECONSTR
+  | TYPEXPR ?w TYPECONSTR
 *)
 
 TYPECONSTR -> TYPECONSTRNAME
@@ -155,17 +177,17 @@ TYPECONSTR -> TYPECONSTRNAME
 POLYTYPEXPR -> TYPEXPR
 ;
 
-
+(* var names FIXME *)
 
 
 (* 6.5 Constants *)
 
 CONSTANT -> CONSTR
-  | "[" ?w? "]"
-  | ?num?
-  | "-" ?num?
-  | '"' s=?notdquote? '"'
-  | "'" s=?notsquote? "'"
+  | "[" ?w "]"
+  | ?num
+  | "-" ?num
+  | '"' ?notdquote '"'
+  | "'" ?notsquote "'"
   | "()"
 ;
 
@@ -180,21 +202,21 @@ PATTERN -> EXPR
 (* 6.7 Expressions ; grammar is too ambiguous so we identify atomic expressions which can be arguments to functions *)
 
 EXPR -> ATEXPR
-  | e=EXPR ":" t=TYPEXPR
-  | EXPR ?w? "," ?w? EXPRA
-  | CONSTR ?w? EXPR
-  | EXPR ?w? "::" ?w? EXPR
+  | EXPR ":" TYPEXPR
+  | EXPR ?w "," ?w EXPRA
+  | CONSTR ?w EXPR
+  | EXPR ?w "::" ?w EXPR
   | FNARGS
-  | EXPR ?w? INFIXOP ?w? EXPR
-  | "if" w1=?w? e1=EXPR w2=?w? "then" w3=?w? e2=EXPR w4=?w? "else" w5=?w? e3=EXPR
+  | EXPR ?w INFIXOP ?w EXPR
+  | "if" ?w EXPR ?w "then" ?w EXPR ?w "else" ?w EXPR
 
-  | "match" w1=?w? e=EXPR w2=?w? "with" w3=?w? cs=PATTERNMATCHING w4=?w? "end"
+  | "match" ?w EXPR ?w "with" ?w PATTERNMATCHING ?w "end"
 
-  | "let" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR
+  | "let" ?w LETBINDING ?w "in" ?w EXPR
 
-  | "let" w0=?w? "rec" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR
+  | "let" ?w "rec" ?w LETBINDING ?w "in" ?w EXPR
 
-  | "fun" w1=?w? e1=MULTIPLEMATCHING
+  | "fun" ?w MULTIPLEMATCHING
 ;
 
 (* FIXME List.map parses as ATEXPR "." FIELDNAME, where ATEXPR is CONSTANT CONSTR *)
@@ -202,130 +224,130 @@ EXPR -> ATEXPR
 ATEXPR ->
     VALUEPATH
   | CONSTANT
-  | "(" w1=?w? e1=EXPR w2=?w? ")"
-  | "[" w1=?w? ss=EXPRLIST w2=?w? "]"
+  | "(" ?w EXPR ?w ")"
+  | "[" ?w EXPRLIST ?w "]"
   | RECORD
-  | s1=ATEXPR "." s2=FIELDNAME
-  | s1=ATEXPR "." "[" s2=EXPR "]"
+  | ATEXPR "." FIELDNAME
+  | ATEXPR "." "[" EXPR "]"
   | "_"
   | "<fun>"
-  | "(" w1=?w? s1=INFIXOP w2=?w? ")"
+  | "(" ?w INFIXOP ?w ")"
 ;
 
 EXPRA -> EXPR
-  | EXPR ?w? "," ?w? EXPRA
+  | EXPR ?w "," ?w EXPRA
 ;
 
 
 EXPRLIST ->
     EXPR
-  | EXPR ?w? ";" ?w? EXPRLIST
+  | EXPR ?w ";" ?w EXPRLIST
 ;
 
 
 PATTERNMATCHING -> CASESB
-  | "|" w1=?w? x=CASESB
+  | "|" ?w CASESB
 ;
 
 
 CASESB ->
   CASE
-  | c1=CASE w1=?w? "|" w2=?w? cs=CASESB
+  | CASE ?w "|" ?w CASESB
 (* above clause erroneously allows cases to start with a bar *)
 ;
 
-CASE -> e1=PATTERN w1=?w? "->" w2=?w? e2=EXPR
+CASE -> PATTERN ?w "->" ?w EXPR
 ;
 
 
 MULTIPLEMATCHING -> PATTERNMATCHING ;
 
-LETBINDING -> PATTERN ?w? "=" ?w? EXPR ;
+LETBINDING -> PATTERN ?w "=" ?w EXPR ;
 
 
 
-FNARGS -> ATEXPR ?w? ATEXPR
-  | ATEXPR ?w? FNARGS
+FNARGS -> ATEXPR ?w ATEXPR
+  | ATEXPR ?w FNARGS
 ;
 
 RECORD ->
-    "<|" w1=?w? fs=FIELDS w2=?w? "|>"
-  | "<|" w1=?w? i=ATEXPR w2=?w? "with" w3=?w? fs=FIELDS w4=?w? "|>"
+    "<|" ?w FIELDS ?w "|>"
+  | "<|" ?w ATEXPR ?w "with" ?w FIELDS ?w "|>"
 ;
 
 FIELDS ->
     FIELD
-  | FIELD ?w? ";" ?w? FIELDS
+  | FIELD ?w ";" ?w FIELDS
 ;
 
 FIELD ->
-    f=?ident? w1=?w? "=" w2=?w? e=EXPR
+    ?ident ?w "=" ?w EXPR
 ;
 
 
 (* 6.8 Type and exception definitions *)
 
-TYPEDEFINITION -> "type" w1=?w? s2=TYPEDEF
+TYPEDEFINITION -> "type" ?w TYPEDEF
 ;
 
-TYPEDEF -> TYPECONSTRNAME ?w? TYPEINFORMATION
+TYPEDEF -> TYPECONSTRNAME ?w TYPEINFORMATION
 
-  | TYPECONSTRNAME ?w? TYPEPARAMS ?w? TYPEINFORMATION
+  | TYPECONSTRNAME ?w TYPEPARAMS ?w TYPEINFORMATION
 
       (* FIXME what about params? may cause problems because hol lists params in order they occur in defn :( *)
 ;
 
 TYPEPARAMS -> TYPEPARAM
-  | TYPEPARAM ?w? TYPEPARAMS
+  | TYPEPARAM ?w TYPEPARAMS
 ;
 
 OCAMLTYPEPARAMS -> TYPEPARAM
-  | "(" ?w? TYPEPARAMSA ?w? ")"
+  | "(" ?w TYPEPARAMSA ?w ")"
 ;
 
 TYPEPARAMSA -> TYPEPARAM
-  | TYPEPARAM ?w? "," ?w? TYPEPARAMSA
+  | TYPEPARAM ?w "," ?w TYPEPARAMSA
 ;
 
-TYPEPARAM -> "'" ?ident?
+TYPEPARAM -> "'" ?ident
 ;
 
-TYPECONSTRNAME -> ?ident?
+TYPECONSTRNAME -> ?ident
 ;
 
 TYPEINFORMATION -> TYPEEQUATION
   | TYPEREPRESENTATION
 ;
 
-TYPEEQUATION -> "=" ?w? TYPEXPR ;
+TYPEEQUATION -> "=" ?w TYPEXPR ;
 
-TYPEREPRESENTATION -> "=" ?w? CONSTRDECLS
-  | "=" w3=?w? "<|" w1=?w? s2=FIELDDECLS w2=?w? "|>"
+TYPEREPRESENTATION -> "=" ?w CONSTRDECLS
+  | "=" ?w "<|" ?w FIELDDECLS ?w "|>"
 ;
 
 
 CONSTRDECLS -> CONSTRDECL
-  | s1=CONSTRDECL w1=?w? "|" w2=?w? s2=CONSTRDECLS
+  | CONSTRDECL ?w "|" ?w CONSTRDECLS
 ;
 
 CONSTRDECL -> CONSTRNAME
-  | s1=CONSTRNAME w1=?w? "of" w2=?w? s2=TYPEXPR
+  | CONSTRNAME ?w "of" ?w TYPEXPR
 ;
 
-CONSTRNAME -> ?_Ident? ;
+CONSTRNAME -> ?_Ident ;
 
 (* following can end in optional ; *)
 FIELDDECLS -> FIELDDECLSA
-  | s1=FIELDDECLSA w1=?w? s2=";"
+  | FIELDDECLSA ?w ";"
 ;
 
 FIELDDECLSA -> FIELDDECL
-  | s1=FIELDDECL w1=?w? ";" w2=?w? s2=FIELDDECLSA
+  | FIELDDECL ?w ";" ?w FIELDDECLSA
 ;
 
 (* FIXME the pattern is we map nonterms to strings; this causes lots of messing about with c and ^ *)
 
-FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR 
+FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR 
 
 |}
 
@@ -333,7 +355,8 @@ let _ = print_endline "Parsing grammar (x100)..."
 
 let g' = for i = 1 to 100 do ignore(grammar g) done
 
-let _ = grammar g |> function Some x -> x | None -> failwith __LOC__ 
+let _ = grammar g |> function Some (x,s) -> 
+    print_endline s; assert (s="") | None -> failwith __LOC__ 
 
 let _ = print_endline "finished!"
 
