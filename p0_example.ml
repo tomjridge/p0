@@ -363,12 +363,14 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 
 |}
 
-let _ = print_endline "Parsing grammar (x100)..."
+let _ = Pervasives.print_string "Parsing grammar (x100)..."
 
 let g' = for i = 1 to 100 do ignore(grammar g) done
 
-let _ = grammar g |> function Some (x,s) -> 
-    print_endline s; assert (s="") | None -> failwith __LOC__ 
+let _ = grammar g |> function 
+  | Some (x,s) -> 
+    assert (if s="" then true else (print_endline s; false) ) 
+  | None -> failwith __LOC__ 
 
 let _ = print_endline "finished!"
 
@@ -383,3 +385,41 @@ user	0m0.212s
 sys	0m0.016s
 
 *)
+
+
+(* arithmetic ------------------------------------------------------- *)
+
+(* for plus, we need one 1+|exp| of lookahead to check the operation *)
+
+
+let rec times init = 
+  plus ~sep:(a"*") atomic |>> fun es -> return @@ `Times (init::es)
+
+(* 1st clause; parses 1+2+3; needs at least one at exp, or empty *)
+and plus1 sofar = (* zero or more *)
+  (atomic |>> fun x -> plus2 sofar x)
+  || ((a"") |>> fun _ -> return @@ `Plus sofar)
+
+and plus2 sofar init = (
+  opt (a"+") |>> function
+  | Some _ -> plus1 (sofar@[init])  (* pass along accumulated terms *)
+  | None -> opt (a"*") |>> function
+    | Some _ -> (
+        (* parse a product *)
+        times init |>> fun product -> 
+        (* then try to carry on parsing plus2 *)
+        plus2 sofar product)
+    | None -> 
+      (* neither a + or a * *)
+      return (`Plus3(sofar,init)))
+
+and atomic s = 
+  begin
+    num || ( 
+      a"(" -- plus1 [] -- a")" |>> fun ((_,x),_) -> return (`Bra x))
+  end s
+
+and num = re"[0-9]+" |>> fun x -> return @@ `Int (int_of_string x)
+
+let _ = "1+2*3*4+5*6" |> plus1 [] |> function Some(x,_) -> 
+    assert (x = `Plus3 ([`Int 1; `Times [`Int 2; `Int 3; `Int 4]], `Times [`Int 5; `Int 6]))
