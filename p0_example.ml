@@ -363,16 +363,17 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 
 |}
 
-let _ = Pervasives.print_string "Parsing grammar (x100)..."
+let test () = 
+  let _ = grammar g |> function 
+    | Some (x,s) -> 
+      assert (if s="" then true else (print_endline s; false) ) 
+    | None -> failwith __LOC__ 
+  in
+  Pervasives.print_string "Parsing grammar (x100)...";
+  for i = 1 to 100 do ignore(grammar g) done;
+  print_endline "finished!"
 
-let g' = for i = 1 to 100 do ignore(grammar g) done
-
-let _ = grammar g |> function 
-  | Some (x,s) -> 
-    assert (if s="" then true else (print_endline s; false) ) 
-  | None -> failwith __LOC__ 
-
-let _ = print_endline "finished!"
+let _ = test ()
 
 (*
 
@@ -401,7 +402,8 @@ and atomic s = (
 
 and num s = (re"[0-9]+" |>> fun x -> return (`Int (int_of_string x))) s
 
-let test = ("1+2*3*4+5*6" |> plus_)
+
+let test () = ("1+2*3*4+5*6" |> plus_)
 
 
 (* csv -------------------------------------------------------------- *)
@@ -415,16 +417,33 @@ let rec inside sofar s = (
     | None -> return (`Quoted (sofar^x))
     | Some _ -> inside (sofar^x^dq))) s
 let quoted = (a dq -- inside "") |>> fun (_,x) -> return x
-let not_unquoted = ("["^comma^dq^eol^"]")
+let unquoted_terminators = ("["^comma^dq^eol^"]")
 (* NOTE the following will parse an empty line as an unquoted *)
 let unquoted s = (
-  upto_re not_unquoted |>> fun x -> return (`Unquoted x)) s
+  upto_re unquoted_terminators |>> fun x -> return (`Unquoted x)) s
 let field = quoted || unquoted
 let row = plus ~sep:(a comma) field  (* see unquoted || (a"" |>> fun _ -> return []) *)
 let rows = star ~sep:(a eol) row
 
+let _ = 
+  print_string "Testing csv parser...";
+  rows {|
+a,b,c
+d,"e,f,g",h
+i,"jk""l",
+|} 
+  |> fun res ->
+  let expected  = Some
+      ([[`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
+        [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
+        [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""]; [`Unquoted ""]],
+       "")
+  in
+  assert(res=expected);
+  print_endline "finished!"
 
-module Test_ = functor(_: sig end) -> struct
+
+module Manual_testing_ = functor(_: sig end) -> struct
   let test = {|"jk""l"|} |> quoted
 
   let _ = unquoted "\n"
@@ -434,7 +453,7 @@ module Test_ = functor(_: sig end) -> struct
       Str.(
         upto_re ~re:(regexp "x") {s_="x";i_=0})) [@@warning "-40"]
 
-  let _ = (upto_re not_unquoted "hx\n")
+  let _ = (upto_re unquoted_terminators "hx\n")
 
   let test = (unquoted {|h
                        |}) |> fun x -> x;;
@@ -455,19 +474,3 @@ i,"jk""l",
 |} 
 end
 
-let _ = 
-  print_string "Testing csv parser...";
-  rows {|
-a,b,c
-d,"e,f,g",h
-i,"jk""l",
-|} 
-  |> fun res ->
-  let expected  = Some
-      ([[`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
-        [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
-        [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""]; [`Unquoted ""]],
-       "")
-  in
-  assert(res=expected);
-  print_endline "finished!"
