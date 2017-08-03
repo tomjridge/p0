@@ -92,6 +92,15 @@ let re re' = (
     then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
     else None) [@@warning "-w-40"]
 
+let upto_re re' = (
+  let re' = Str.regexp re' in
+  fun s ->
+    Tjr_substring.(upto_re ~re:re' {s_=s;i_=0}) |> fun xs ->
+    if xs <> []
+    then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
+    else None) [@@warning "-w-40"]
+
+
 let opt p s = 
   p s |> function
   | None -> Some(None,s) 

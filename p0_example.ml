@@ -389,40 +389,67 @@ sys	0m0.016s
 
 (* arithmetic ------------------------------------------------------- *)
 
-(* for plus, we need one 1+|exp| of lookahead to check the operation *)
+(* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
+
+let rec times s = (plus ~sep:(a"*") atomic |>> fun es -> return (`Times es)) s
+
+and plus_ s = (plus ~sep:(a"+") times |>> fun es -> return (`Plus es)) s
+
+and atomic s = (
+  num || 
+  (a"(" -- plus_ -- a")" |>> fun ((_,x),_) -> return (`Bra x))) s
+
+and num s = (re"[0-9]+" |>> fun x -> return (`Int (int_of_string x))) s
+
+let test = ("1+2*3*4+5*6" |> plus_)
 
 
-let rec times init = 
-  plus ~sep:(a"*") atomic |>> fun es -> return @@ `Times (init::es)
+(* csv -------------------------------------------------------------- *)
 
-(* 1st clause; parses 1+2+3; needs at least one at exp, or empty *)
-and plus1 sofar = (* zero or more *)
-  (atomic |>> fun x -> plus2 sofar x)
-  || ((a"") |>> fun _ -> return @@ `Plus sofar)
+let dq = "\""
+let comma = ","
+let eol = "\n"
+let rec inside sofar s = (
+  upto_a dq -- a dq |>> fun (x,_) ->
+  (opt (a dq) |>> function
+    | None -> return (`Quoted (sofar^x))
+    | Some _ -> inside (sofar^x^dq))) s
+let quoted = (a dq -- inside "") |>> fun (_,x) -> return x
+let not_unquoted = ("["^comma^dq^eol^"]")
+let unquoted s = (
+  upto_re not_unquoted |>> fun x -> return (`Unquoted x)) s
+let field = quoted || unquoted
+let row = plus ~sep:(a comma) field || (a"" |>> fun _ -> return [])
+let rows = star ~sep:(a eol) row
 
-and plus2 sofar init = (
-  opt (a"+") |>> function
-  | Some _ -> plus1 (sofar@[init])  (* pass along accumulated terms *)
-  | None -> 
-    opt (a"*") |>> function
-    | Some _ -> (
-        (* parse a product *)
-        times init |>> fun product -> 
-        (* then try to carry on parsing plus2 *)
-        plus2 sofar product)
-    | None -> 
-      (* neither a + or a * *)
-      return (`Plus3(sofar,init)))
 
-and atomic s = 
-  begin
-    num || ( 
-      a"(" -- plus1 [] -- a")" |>> fun ((_,x),_) -> return (`Bra x))
-  end s
+module Test_ = functor(_: sig end) -> struct
+  let test = {|"jk""l"|} |> quoted
 
-and num = re"[0-9]+" |>> fun x -> return @@ `Int (int_of_string x)
+  let _ = unquoted "\n"
 
-let _ = "1+2*3*4+5*6" |> plus1 [] |> function 
-  | Some(x,_) -> 
-    assert (x = `Plus3 ([`Int 1; `Times [`Int 2; `Int 3; `Int 4]], `Times [`Int 5; `Int 6]))
-  | _ -> ()
+  let _ = 
+    Tjr_substring.(
+      Str.(
+        upto_re ~re:(regexp "x") {s_="x";i_=0}))
+
+  let _ = (upto_re not_unquoted "hx\n")
+
+  let test = (unquoted {|h
+                       |}) |> fun x -> x;;
+
+  let test = row {|d,"e,f,g",h
+                 |}
+
+  (* tuareg doesn't seem to like the string syntax - so eval region *)
+  let test = rows {|
+a,b,c
+d,"e,f,g",h
+|}
+
+  let test = rows {|
+a,b,c
+d,"e,f,g",h
+i,"jk""l",
+|} 
+end
