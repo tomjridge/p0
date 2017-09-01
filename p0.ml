@@ -2,52 +2,56 @@
 
 (* worth working with indexes rather than strings? *)
 
-(* following extracted from tjr_lib to make this self-contained *)
-module Tjr_substring = struct
+(* following extracted from tjr_lib to make this self-contained;
+   primed so that no clash with original modules *)
+module P0_internal = struct
+  module Tjr_substring = struct
 
-  module String_position = struct
-    type string_position = {
-      s_:string;
-      i_:int
-    }
+    module String_position = struct
+      type string_position = {
+        s_:string;
+        i_:int
+      }
+    end
+    open String_position
+
+    let re ~re s = 
+      if (Str.string_match re s.s_ s.i_) then
+        [Str.match_end ()]  (* FIXME return all results? *)
+      else []
+
+    let upto_re ~re s =
+      try 
+        Str.search_forward re s.s_ s.i_ |> fun k ->
+        [k]
+      with Not_found -> []
   end
-  open String_position
 
-  let re ~re s = 
-    if (Str.string_match re s.s_ s.i_) then
-      [Str.match_end ()]  (* FIXME return all results? *)
-    else []
+  module Tjr_string = struct
+    let starts_with ~prefix b =
+      let len = String.length prefix in
+      len > String.length b |> function 
+      | true -> false
+      | false -> 
+        let rec f j = 
+          if j >= len then true else
+            prefix.[j] = b.[j] &&
+            f (j+1)
+        in
+        f 0
 
-  let upto_re ~re s =
-    try 
-      Str.search_forward re s.s_ s.i_ |> fun k ->
-      [k]
-    with Not_found -> []
+    (* more efficient version? *)
+    let drop n s =
+      String.length s |> fun l ->
+      if n >= l then "" else
+        String.sub s n (l-n)
+
+    let split_at s n = (String.sub s 0 n, String.sub s n (String.length s - n))
+
+  end
 end
 
-module Tjr_string = struct
-  let starts_with ~prefix b =
-    let len = String.length prefix in
-    len > String.length b |> function 
-    | true -> false
-    | false -> 
-      let rec f j = 
-        if j >= len then true else
-          prefix.[j] = b.[j] &&
-          f (j+1)
-      in
-      f 0
-
-  (* more efficient version? *)
-  let drop n s =
-    String.length s |> fun l ->
-    if n >= l then "" else
-      String.sub s n (l-n)
-
-  let split_at s n = (String.sub s 0 n, String.sub s n (String.length s - n))
-
-end
-
+open P0_internal
 open Tjr_string
 
 let upto_a lit = Tjr_substring.upto_re ~re:Str.(regexp_string lit)
