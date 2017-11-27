@@ -10,7 +10,7 @@ module type RE = sig
 
   val literal: string -> re
 
-  val regexp: string -> re
+(*  val regexp: string -> re *)
 
   (* match regexp from offset off in s; return offset after match *)
   val string_match: re:re -> off:int -> string -> int option
@@ -25,7 +25,7 @@ module Str_ = struct
 
   let literal s = Str.regexp_string s
 
-  let regexp s = Str.regexp s
+(*  let regexp s = Str.regexp s *)
 
   let string_match ~re ~off s = 
     if (Str.string_match re s off) 
@@ -138,7 +138,6 @@ module Make(Re:RE) = struct
       else None) [@@warning "-w-40"]
 
   let re re' = (
-    let re' = Re.regexp re' in
     fun s ->
       Tjr_substring.(re ~re:re' {s_=s;i_=0}) |> fun xs ->
       if xs <> []
@@ -146,7 +145,6 @@ module Make(Re:RE) = struct
       else None) [@@warning "-w-40"]
 
   let upto_re re' = (
-    let re' = Re.regexp re' in
     fun s ->
       Tjr_substring.(upto_re ~re:re' {s_=s;i_=0}) |> fun xs ->
       if xs <> []

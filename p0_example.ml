@@ -4,6 +4,10 @@
 
 open P0
 
+let re s = re (Str.regexp s)
+
+let upto_re s = upto_re (Str.regexp s)
+
 (* grammar of grammars ---------------------------------------------- *)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
