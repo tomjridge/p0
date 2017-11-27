@@ -443,6 +443,7 @@ i,"jk""l",
   print_endline "finished!"
 
 
+(* NOTE need Tjr_substring
 module Manual_testing_ = functor(_: sig end) -> struct
   let test = {|"jk""l"|} |> quoted
 
@@ -473,4 +474,4 @@ d,"e,f,g",h
 i,"jk""l",
 |} 
 end
-
+*)
