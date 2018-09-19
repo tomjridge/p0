@@ -1,0 +1,3 @@
+(executable
+  (name p0_example)
+  (libraries p0_lib))

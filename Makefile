@@ -1,16 +1,16 @@
-libname=p0
-all:
-	ocamlfind ocamlc -c p0.ml
-	ocamlfind ocamlopt -c p0.ml
-	ocamlfind ocamlc -g -a -o $(libname).cma p0.cmo
-	ocamlfind ocamlopt -g -a -o $(libname).cmxa p0.cmx
-	-ocamlfind remove $(libname)
-	ocamlfind install $(libname) META *.cmi *.o *.a *.cma *.cmxa *.cmo *.cmx 
+SHELL:=bash
 
-# uses the installed library
-example:
-	ocamlfind ocamlopt -package p0 -linkpkg p0_example.ml
+build:
+	dune build 
+	dune build bin/p0_example.exe
+
+install:
+	dune install
+
+run_example:
+	dune exec ./bin/p0_example.exe
 
 clean:
-	rm -f *.{cmi,cmo,cmx,o,a,cmxa,cma}
-
+	rm -rf *.{cmi,cmo,cmx,o,a,cmxa,cma} a.out _build
+	dune clean
+	rm -f p0_lib.install

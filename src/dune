@@ -1,0 +1,7 @@
+(library
+  (public_name p0_lib)
+  (libraries str))
+
+; (executable
+;   (name p0_example)
+;   (libraries p0_lib))

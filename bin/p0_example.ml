@@ -2,7 +2,7 @@
 
 (* worth working with indexes rather than strings? *)
 
-open P0
+open P0_lib.P0
 
 let re s = re (Str.regexp s)
 
@@ -369,12 +369,12 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 
 let test () = 
   let _ = grammar g |> function 
-    | Some (x,s) -> 
+    | Some (_x,s) -> 
       assert (if s="" then true else (print_endline s; false) ) 
     | None -> failwith __LOC__ 
   in
   Pervasives.print_string "Parsing grammar (x100)...";
-  for i = 1 to 100 do ignore(grammar g) done;
+  for _i = 1 to 100 do ignore(grammar g) done;
   print_endline "finished!"
 
 let _ = test ()
