@@ -1,3 +1,3 @@
 (library
   (public_name p0_lib)
-  (libraries ppx_deriving_yojson))
+  (libraries str ppx_deriving_yojson))
