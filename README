@@ -2,4 +2,6 @@
 
 * p0: simple monadic parsing with continuations
 
+OCamldoc at ~https://tomjridge.github.io/p0/~
+
 For an example of use, see file ~p0_example.ml~
