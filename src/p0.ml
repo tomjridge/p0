@@ -3,8 +3,7 @@
 
 (* parameterize over RE --------------------------------------------- *)
 
-(* we want to parameterize over the re implementation *)
-
+(** We want to parameterize over the regexp implementation *)
 module type RE = sig
   type re
 
@@ -19,7 +18,7 @@ module type RE = sig
   val search_forward: re:re -> off:int -> string -> int option
 end
 
-
+(** Str is one such implementation *)
 module Str_ = struct
   type re = Str.regexp
 
@@ -39,18 +38,20 @@ module Str_ = struct
     with Not_found -> None    
 end
 
-
+(** {!X_} is {!Str_} restricted to interface {!RE} *)
 module X_ = (Str_ : RE)
 
 
 (* Make(Re) --------------------------------------------------------- *)
+
+(** Make a parser implementation using a particular regexp impl *)
 module Make(Re:RE) = struct
 
   (* worth working with indexes rather than strings? *)
 
-  (* following extracted from tjr_lib to make this self-contained;
+  (** Following extracted from tjr_lib to make this self-contained;
      primed so that no clash with original modules *)
-  module P0_internal = struct
+  module Internal = struct
     module Tjr_substring = struct
 
       module String_position = struct
@@ -100,16 +101,18 @@ module Make(Re:RE) = struct
     end
   end
 
-  open P0_internal
+  open Internal
   open Tjr_string
 
   let upto_a lit = Tjr_substring.upto_re ~re:Re.(literal lit)
+
 
   (* naive monadic parsing -------------------------------------------- *)
 
   (* experiment with monadic parsing; 'a m takes a string and returns an
      'a * string or an error/noparse indication *)
-
+  
+  (** Simple monadic parsing type; at most one result *)
   type 'a m = string -> ('a * string) option
 
   let bind (f:'a -> 'b m) (x:'a m) :'b m = 
@@ -118,7 +121,10 @@ module Make(Re:RE) = struct
 
   let return x s = Some(x,s)
 
+  (** Parse one then another; return a pair *)
   let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
+
+  (** Infix for then_ *)
   let ( -- ) = then_
 
   (* FIXME improve this by using the result of the parse subsequently *)
@@ -137,6 +143,7 @@ module Make(Re:RE) = struct
       then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
       else None) [@@warning "-w-40"]
 
+  (** Parse a regular exp *)
   let re re' = (
     fun s ->
       Tjr_substring.(re ~re:re' {s_=s;i_=0}) |> fun xs ->
@@ -144,6 +151,7 @@ module Make(Re:RE) = struct
       then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
       else None) [@@warning "-w-40"]
 
+  (** Parse upto a regular exp *)
   let upto_re re' = (
     fun s ->
       Tjr_substring.(upto_re ~re:re' {s_=s;i_=0}) |> fun xs ->
@@ -153,12 +161,13 @@ module Make(Re:RE) = struct
         (* not found anywhere, so consume the whole string *)
         Some(s,"")) [@@warning "-w-40"]
 
-
+  (** Parse an optional something *)
   let opt p s = 
     p s |> function
     | None -> Some(None,s) 
     | Some(x,s) -> Some(Some x,s)
 
+  (** Parse one or more *)
   let rec plus ~sep p = 
     p |>> fun x ->
     (opt (sep -- plus ~sep p)) |>> function
@@ -172,6 +181,7 @@ let save s = Some(s,s)
 let restore s' s = Some((),s')
 *)
 
+  (** Zero or more *)
   let star ~sep p =
     opt p |>> function
     | None -> return []
@@ -180,27 +190,33 @@ let restore s' s = Some((),s')
       | None -> return [x]
       | Some (_,xs) -> return (x::xs)
 
-  (* shortcut alternative *)
+  (** Shortcut alternative *)
   let alt a b = 
     opt a |>> function
     | None -> b
     | Some x -> return x
 
+  (** Infix alt *)
   let ( || ) = alt       
 
+  (** Parse but return a unit *)
   let discard p = p |>> fun _ -> return ()
 
+  (** Parse a then b, and discard both FIXME why pick this out? *)
   let ( --- ) a b = discard (a -- b) 
 
   let _Some x = Some x
 
-  (* to avoid dependence on associativity of -- *)
+  (** Helper to avoid dependence on associativity of -- *)
   let _3 ((x1,x2),x3) = (x1,x2,x3)
 
 end
 
 
 (* Make(Str_) and include ------------------------------------------- *)
+
+(** Instantiate parser with Str *)
 module P0_str = Make(Str_)
 
+(** And include *)
 include P0_str
