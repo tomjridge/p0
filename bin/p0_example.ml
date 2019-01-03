@@ -2,11 +2,14 @@
 
 (* worth working with indexes rather than strings? *)
 
-open P0_lib.P0
+open P0_lib
+open P0
+open Str_re
 
-let re s = re (Str.regexp s)
+let re s = re ~re:(Str.regexp s)
 
-let upto_re s = upto_re (Str.regexp s)
+let upto_re s = upto_re ~re:(Str.regexp s)
+
 
 (* grammar of grammars ---------------------------------------------- *)
 
@@ -47,26 +50,33 @@ let grammar = ws -- rules -- ws |>> fun x -> _3 x |> fun (_,x2,_) -> return x2
 
 (* example ---------------------------------------------------------- *)
 
-module X_ = functor(_:sig end) -> struct
+let _ = 
+  let example = {|?w|} in
 
-  let example = {|?w?|}
+  let _ = tm example in
 
-  let _ = tm example
-
-  let _ = example |> a "?" -- re"[a-z]+"
+  let _ = example |> a "?" -- re"[a-z]+" in
 
   let example = {|
 
 (* the expressions we want to parse at top-level *)
-S -> ?w? DEFN ?w? ?eof?
-| ?w? TYPEDEFINITIONS ?w? ?eof?
-| ?w? TYPEXPR ?w? ?eof?
+S -> ?w DEFN ?w ?eof
+| ?w TYPEDEFINITIONS ?w ?eof
+| ?w TYPEXPR ?w ?eof
 
-|}
+|} in
 
-  let _ = grammar example
+  let r = grammar example in
+  assert (
+    match r with
+    | None -> false
+    | Some(_,s) -> 
+      match s with 
+      | "" -> true
+      | _ -> (print_endline s; false));
+  ()
+[@@ocaml.warning "-8"]
 
-end
 
 (* ocaml grammar ---------------------------------------------------- *)
 
@@ -437,11 +447,11 @@ d,"e,f,g",h
 i,"jk""l",
 |} 
   |> fun res ->
-  let expected  = Some
-      ([[`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
-        [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
-        [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""]; [`Unquoted ""]],
-       "")
+  let expected  = Some(
+      [[`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
+       [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
+       [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""]],
+      "\n")
   in
   assert(res=expected);
   print_endline "finished!"

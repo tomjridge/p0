@@ -1,178 +1,79 @@
-(* monadic parser combinators *)
+(** Monadic parser combinators *)
 
 
-(* parameterize over RE --------------------------------------------- *)
+include String_util
 
-(** We want to parameterize over the regexp implementation *)
-module type RE = sig
-  type re
-
-  val literal: string -> re
-
-(*  val regexp: string -> re *)
-
-  (* match regexp from offset off in s; return offset after match *)
-  val string_match: re:re -> off:int -> string -> int option
-
-  (* search forward from off to find offset where re matches *)
-  val search_forward: re:re -> off:int -> string -> int option
-end
-
-(** Str is one such implementation *)
-module Str_ = struct
-  type re = Str.regexp
-
-  let literal s = Str.regexp_string s
-
-(*  let regexp s = Str.regexp s *)
-
-  let string_match ~re ~off s = 
-    if (Str.string_match re s off) 
-    then Some(Str.match_end ())  (* FIXME return all results? *)
-    else None
-
-  let search_forward ~re ~off s =
-    try 
-      Str.search_forward re s off |> fun k ->
-      Some k
-    with Not_found -> None    
-end
-
-(** {!X_} is {!Str_} restricted to interface {!RE} *)
-module X_ = (Str_ : RE)
+include Types
 
 
-(* Make(Re) --------------------------------------------------------- *)
+(* naive monadic parsing -------------------------------------------- *)
 
-(** Make a parser implementation using a particular regexp impl *)
-module Make(Re:RE) = struct
+(* experiment with monadic parsing; 'a m takes a string and returns an
+   'a * string or an error/noparse indication *)
 
-  (* worth working with indexes rather than strings? *)
+let bind (f:'a -> 'b m) (x:'a m) :'b m = 
+  fun s -> x s |> function | None -> None | Some (v,s) -> f v s
+let ( |>> ) x f = x |> bind f
 
-  (** Following extracted from tjr_lib to make this self-contained;
-     primed so that no clash with original modules *)
-  module Internal = struct
-    module Tjr_substring = struct
+let return x s = Some(x,s)
 
-      module String_position = struct
-        type string_position = {
-          s_:string;
-          i_:int
-        }
-      end
-      open String_position
+(** Parse one then another; return a pair *)
+let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
 
+(** Infix for then_ *)
+let ( -- ) = then_
 
-      let re ~re s = 
-        match (Re.string_match ~re ~off:s.i_ s.s_) with
-        | None -> []
-        | Some i -> [i]  (* FIXME return all results? *)
+(* FIXME improve this by using the result of the parse subsequently *)
+(* let can x s = Some (x s <> None,s) *)
 
-
-      let upto_re ~re s =
-        Re.search_forward ~re ~off:s.i_ s.s_ |> function
-        | None -> []
-        | Some k -> [k]
-    end
+let a lit s = 
+  if starts_with ~prefix:lit s 
+  then drop (String.length lit) s |> fun s' -> Some(lit,s') 
+  else None
 
 
+(* let upto_a lit = Tjr_substring.upto_re ~re:Re.(literal lit) *)
 
-    module Tjr_string = struct
-      let starts_with ~prefix b =
-        let len = String.length prefix in
-        len > String.length b |> function 
-        | true -> false
-        | false -> 
-          let rec f j = 
-            if j >= len then true else
-              prefix.[j] = b.[j] &&
-              f (j+1)
-          in
-          f 0
-
-      (* more efficient version? *)
-      let drop n s =
-        String.length s |> fun l ->
-        if n >= l then "" else
-          String.sub s n (l-n)
-
-      let split_at s n = (String.sub s 0 n, String.sub s n (String.length s - n))
-
-    end
-  end
-
-  open Internal
-  open Tjr_string
-
-  let upto_a lit = Tjr_substring.upto_re ~re:Re.(literal lit)
+(* FIXME following should use prefix *)
+let upto_a lit = 
+  assert(lit <> "");
+  let len_lit = String.length lit in
+  fun s -> 
+    let len_s = String.length s in
+    (* just search through s looking for lit *)
+    let rec matches_at i i' = 
+      (* assume i < len s *)
+      match i' >= len_lit with
+      | true -> true
+      | _ -> 
+        match i<len_s with
+        | true -> 
+          (String.get s i = String.get lit i') &&
+          matches_at (i+1) (i'+1)
+        | _ -> false
+    in
+    let rec f i = 
+      if i+len_lit > len_s then None else
+      if matches_at i 0 then Some i else f (i+1)
+    in
+    f 0 |> function
+    | None -> None
+    | Some i -> split_at s i |> fun (s1,s2) -> Some(s1,s2)
+[@@warning "-w-40"]
 
 
-  (* naive monadic parsing -------------------------------------------- *)
+(** Parse an optional something *)
+let opt p s = 
+  p s |> function
+  | None -> Some(None,s) 
+  | Some(x,s) -> Some(Some x,s)
 
-  (* experiment with monadic parsing; 'a m takes a string and returns an
-     'a * string or an error/noparse indication *)
-  
-  (** Simple monadic parsing type; at most one result *)
-  type 'a m = string -> ('a * string) option
-
-  let bind (f:'a -> 'b m) (x:'a m) :'b m = 
-    fun s -> x s |> function | None -> None | Some (v,s) -> f v s
-  let ( |>> ) x f = x |> bind f
-
-  let return x s = Some(x,s)
-
-  (** Parse one then another; return a pair *)
-  let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
-
-  (** Infix for then_ *)
-  let ( -- ) = then_
-
-  (* FIXME improve this by using the result of the parse subsequently *)
-  (* let can x s = Some (x s <> None,s) *)
-
-  let a lit s = 
-    if starts_with ~prefix:lit s 
-    then drop (String.length lit) s |> fun s' -> Some(lit,s') 
-    else None
-
-  let upto_a lit = ( 
-    let p = upto_a lit in
-    fun s -> 
-      p {s_=s;i_=0} |> fun xs ->
-      if xs <> [] 
-      then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-      else None) [@@warning "-w-40"]
-
-  (** Parse a regular exp *)
-  let re re' = (
-    fun s ->
-      Tjr_substring.(re ~re:re' {s_=s;i_=0}) |> fun xs ->
-      if xs <> []
-      then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-      else None) [@@warning "-w-40"]
-
-  (** Parse upto a regular exp *)
-  let upto_re re' = (
-    fun s ->
-      Tjr_substring.(upto_re ~re:re' {s_=s;i_=0}) |> fun xs ->
-      if xs <> []
-      then split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-      else 
-        (* not found anywhere, so consume the whole string *)
-        Some(s,"")) [@@warning "-w-40"]
-
-  (** Parse an optional something *)
-  let opt p s = 
-    p s |> function
-    | None -> Some(None,s) 
-    | Some(x,s) -> Some(Some x,s)
-
-  (** Parse one or more *)
-  let rec plus ~sep p = 
-    p |>> fun x ->
-    (opt (sep -- plus ~sep p)) |>> function
-    | None -> return [x]
-    | Some (_,xs) -> return (x::xs)
+(** Parse one or more *)
+let rec plus ~sep p = 
+  p |>> fun x ->
+  (opt (sep -- plus ~sep p)) |>> function
+  | None -> return [x]
+  | Some (_,xs) -> return (x::xs)
 
 (*
 let save s = Some(s,s)
@@ -181,42 +82,35 @@ let save s = Some(s,s)
 let restore s' s = Some((),s')
 *)
 
-  (** Zero or more *)
-  let star ~sep p =
-    opt p |>> function
-    | None -> return []
-    | Some x -> 
-      opt (sep -- plus ~sep p) |>> function
-      | None -> return [x]
-      | Some (_,xs) -> return (x::xs)
+(** Zero or more *)
+let star ~sep p =
+  opt p |>> function
+  | None -> return []
+  | Some x -> 
+    opt (sep -- plus ~sep p) |>> function
+    | None -> return [x]
+    | Some (_,xs) -> return (x::xs)
 
-  (** Shortcut alternative *)
-  let alt a b = 
-    opt a |>> function
-    | None -> b
-    | Some x -> return x
+(** Shortcut alternative *)
+let alt a b = 
+  opt a |>> function
+  | None -> b
+  | Some x -> return x
 
-  (** Infix alt *)
-  let ( || ) = alt       
+(** Infix alt *)
+let ( || ) = alt       
 
-  (** Parse but return a unit *)
-  let discard p = p |>> fun _ -> return ()
-
-  (** Parse a then b, and discard both FIXME why pick this out? *)
-  let ( --- ) a b = discard (a -- b) 
-
-  let _Some x = Some x
-
-  (** Helper to avoid dependence on associativity of -- *)
-  let _3 ((x1,x2),x3) = (x1,x2,x3)
-
-end
+(** Parse but return a unit *)
+let discard p = p |>> fun _ -> return ()
 
 
-(* Make(Str_) and include ------------------------------------------- *)
+(** Parse a then b, and discard both FIXME why pick this out? *)
+let ( --- ) a b = discard (a -- b) 
 
-(** Instantiate parser with Str *)
-module P0_str = Make(Str_)
+let _Some x = Some x
 
-(** And include *)
-include P0_str
+(** Helper to avoid dependence on associativity of -- *)
+let _3 ((x1,x2),x3) = (x1,x2,x3)
+
+
+
