@@ -1,3 +1,6 @@
 -*- org -*-
 
 - how to handle EOF
+- csv parsing is not correct after recent refactor (last line should
+  parse as a row rather than returning "\n" as a remaining part of the
+  input)
