@@ -1,3 +1,5 @@
+-*- org -*-
+
 * p0: simple monadic parsing with continuations
 
 For an example of use, see file ~p0_example.ml~
