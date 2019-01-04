@@ -32,7 +32,7 @@ let re ~re s =
   | None -> None
   | Some i -> Some(split_at s i)  (* FIXME return all results? *)
 
-
+(** NOTE this requires that re is actually found *)
 let upto_re ~re s =
   search_forward ~re ~off:0 s |> function
   | None -> None

@@ -27,38 +27,31 @@ let ( -- ) = then_
 (* let can x s = Some (x s <> None,s) *)
 
 let a lit s = 
-  if starts_with ~prefix:lit s 
-  then drop (String.length lit) s |> fun s' -> Some(lit,s') 
-  else None
+  match starts_with ~prefix:lit s with
+  | true -> drop (String.length lit) s |> fun s' -> Some(lit,s') 
+  | false -> None
 
 
-(* let upto_a lit = Tjr_substring.upto_re ~re:Re.(literal lit) *)
-
-(* FIXME following should use prefix *)
+(** NOTE the following requires that the lit is actually present (we
+   don't just consume the entire string if we don't find the lit) *)
 let upto_a lit = 
   assert(lit <> "");
   let len_lit = String.length lit in
   fun s -> 
     let len_s = String.length s in
-    (* just search through s looking for lit *)
-    let rec matches_at i i' = 
-      (* assume i < len s *)
-      match i' >= len_lit with
-      | true -> true
-      | _ -> 
-        match i<len_s with
-        | true -> 
-          (String.get s i = String.get lit i') &&
-          matches_at (i+1) (i'+1)
-        | _ -> false
-    in
     let rec f i = 
-      if i+len_lit > len_s then None else
-      if matches_at i 0 then Some i else f (i+1)
+      match i+len_lit-1 > len_s -1 with
+      | true -> None
+      | false -> 
+        match starts_with_at_offset ~prefix:lit ~offset:i s with
+        | true -> Some i
+        | false -> f (i+1)
     in
     f 0 |> function
     | None -> None
-    | Some i -> split_at s i |> fun (s1,s2) -> Some(s1,s2)
+    | Some i -> 
+      split_at s i |> fun (s1,s2) -> 
+      Some(s1,s2)
 [@@warning "-w-40"]
 
 
@@ -113,4 +106,11 @@ let _Some x = Some x
 let _3 ((x1,x2),x3) = (x1,x2,x3)
 
 
+let end_of_string s = 
+  match s with 
+  | "" -> Some((),"")
+  | _ -> None
 
+
+let upto_eos s = Some(s,"")
+  

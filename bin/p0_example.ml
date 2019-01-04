@@ -6,6 +6,8 @@ open P0_lib
 open P0
 open Str_re
 
+let _ = String_util.test ()
+
 let re s = re ~re:(Str.regexp s)
 
 let upto_re s = upto_re ~re:(Str.regexp s)
@@ -432,28 +434,45 @@ let rec inside sofar s = (
     | Some _ -> inside (sofar^x^dq))) s
 let quoted = (a dq -- inside "") |>> fun (_,x) -> return x
 let unquoted_terminators = ("["^comma^dq^eol^"]")
-(* NOTE the following will parse an empty line as an unquoted *)
+(* NOTE the following will parse an empty line as an unquoted provided
+   followed by an unquoted terminator; an empty field as an unquoted
+
+   FIXME we may want unquoted to also parse the empty line upto the end of string
+   *)
 let unquoted s = (
   upto_re unquoted_terminators |>> fun x -> return (`Unquoted x)) s
-let field = quoted || unquoted
+(* the last unquoted field can extend to the end of the string,
+   provided no terminators are found *)
+let last_unquoted_field s = 
+  match search_forward ~re:(Str.regexp unquoted_terminators) ~off:0 s with
+  | None -> Some(`Unquoted s,"")
+  | Some _ -> None  
+let field = quoted || unquoted || last_unquoted_field
 let row = plus ~sep:(a comma) field  (* see unquoted || (a"" |>> fun _ -> return []) *)
 let rows = star ~sep:(a eol) row
 
 let _ = 
   print_string "Testing csv parser...";
+  assert(
   rows {|
 a,b,c
 d,"e,f,g",h
 i,"jk""l",
-|} 
-  |> fun res ->
-  let expected  = Some(
-      [[`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
-       [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
-       [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""]],
-      "\n")
-  in
-  assert(res=expected);
+|} = Some([
+        [`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
+        [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
+        [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""];
+        [`Unquoted ""]
+      ],
+        ""));
+  
+  assert(
+    rows {|
+a,b,c
+d,e,f|} = Some([
+        [`Unquoted ""];
+        [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
+        [`Unquoted "d"; `Unquoted "e"; `Unquoted "f"]],"")); 
   print_endline "finished!"
 
 
