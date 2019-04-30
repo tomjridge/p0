@@ -1,2 +1,2 @@
-(lang dune 1.1)
-(name tjr_first_dune_project)
+(lang dune 1.8)
+(name p0_lib)

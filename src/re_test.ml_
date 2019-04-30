@@ -1,0 +1,11 @@
+open Re
+
+let re = seq [ char 'x'; char 'y' ]
+
+let _ = 
+  re |> compile |> fun re ->
+  exec_opt re "xyz" |> function
+  | None -> failwith "None"
+  | Some g -> 
+    Printf.printf "Matched from %d to %d" (Group.start g 0) (Group.stop g 0);
+    ()

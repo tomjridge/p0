@@ -1,3 +1,8 @@
 (library
   (public_name p0_lib)
-  (libraries str ppx_deriving_yojson))
+  (libraries re))
+
+;; 
+;; (executable
+;;   (name re_test)
+;;   (libraries re))
