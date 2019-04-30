@@ -2,6 +2,8 @@ SHELL:=bash
 
 build:
 	dune build @install
+	dune build bin/p0_example.exe
+	dune exec bin/p0_example.exe
 #	dune build src/re_test.exe
 #	_build/default/src/re_test.exe
 #	dune build bin/p0_example.exe
@@ -10,7 +12,7 @@ install:
 	dune install
 
 run_example:
-	dune exec ./bin/p0_example.exe
+	dune exec bin/p0_example.exe
 
 BUILD_DOC:=_build/default/_doc/_html
 docs: FORCE

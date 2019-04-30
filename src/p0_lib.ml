@@ -70,13 +70,13 @@ module Internal = struct
 
 
     (** An example of how to use regexps with monad *)
-    let a (lit:I.t) : unit m = 
-      let len = len lit in
-      let lit = compile (literal lit) in
+    let a (lit0:I.t) : I.t m = 
+      let len = len lit0 in
+      let lit = compile (literal lit0) in
       exec_re lit >>= fun _g -> 
       get_input () >>= fun i ->
       drop len i |> set_input >>= fun () ->
-      return ()
+      return lit0
 
     (** Parse an optional something *)
     let opt p : 'a m = of_fun (fun i ->
@@ -121,7 +121,6 @@ module Internal = struct
       | 0 -> Some((),i)
       | _ -> None)
 
-
   end
 
   module StringI = struct
@@ -145,11 +144,21 @@ module Internal = struct
   end
 
   module Ocaml_re_instance = struct 
+    include (struct include StringI end : module type of StringI with type t:=string)
+    include Re_
     include Make(StringI)(Re_)
   end
 
 (*
 sig
+  type re = Re_.re
+  type compiled_re = Re_.compiled_re
+  val literal : string -> re
+  val longest : re -> re
+  val compile : re -> compiled_re
+  type group = Re_.group
+  val group_stop : group -> int
+  val exec_opt : compiled_re -> string -> group option
   module Monad :
     sig
       type 'a m = 'a Make(StringI)(Re_).Monad.m
@@ -160,8 +169,8 @@ sig
       val get_input : unit -> string m
       val set_input : string -> unit m
     end
-  val exec_re : Re_.compiled_re -> Re_.group Monad.m
-  val exec_and_drop : Re_.compiled_re -> Re_.group Monad.m
+  val exec_re : compiled_re -> group Monad.m
+  val exec_and_drop : compiled_re -> group Monad.m
   val a : string -> unit Monad.m
   val opt : 'a Monad.m -> 'a option Monad.m
   val then_ : 'a Monad.m -> 'b Monad.m -> ('a * 'b) Monad.m
@@ -171,31 +180,60 @@ sig
   val alt : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
   val ( || ) : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
   val end_of_string : unit Monad.m
-end*)
+end
+
+*)
 
   module Export : sig
-    module Monad :
-    sig
-      type 'a m 
-      val return : 'a -> 'a m
-      val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
-      val of_fun : (string -> ('a * string) option) -> 'a m
-      val to_fun : 'a m -> string -> ('a * string) option
-      val get_input : unit -> string m
-      val set_input : string -> unit m
-    end
-    val exec_re : Re_.compiled_re -> Re_.group Monad.m
-    val exec_and_drop : Re_.compiled_re -> Re_.group Monad.m
-    val a : string -> unit Monad.m
-    val opt : 'a Monad.m -> 'a option Monad.m
-    val then_ : 'a Monad.m -> 'b Monad.m -> ('a * 'b) Monad.m
-    val ( -- ) : 'a Monad.m -> 'b Monad.m -> ('a * 'b) Monad.m
-    val plus : sep:'a Monad.m -> 'b Monad.m -> 'b list Monad.m
-    val star : sep:'a Monad.m -> 'b Monad.m -> 'b list Monad.m
-    val alt : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
-    val ( || ) : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
-    val end_of_string : unit Monad.m
-  end = Ocaml_re_instance
+    val drop : int -> string -> string
+    val len : string -> int
+
+    type re = Re.t (* Re_.re *)
+    type compiled_re = Re.re (* Re_.compiled_re *)
+    val literal : string -> re
+    val longest : re -> re
+    val compile : re -> compiled_re
+    type group = Re.Group.t
+    val group_stop : group -> int
+    val exec_opt : compiled_re -> string -> group option
+
+    type 'a m 
+    val return : 'a -> 'a m
+    val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
+    val of_fun : (string -> ('a * string) option) -> 'a m
+    val to_fun : 'a m -> string -> ('a * string) option
+    val get_input : unit -> string m
+    val set_input : string -> unit m
+
+    val exec_re : compiled_re -> group m
+    val exec_and_drop : compiled_re -> group m
+    val a : string -> string m
+    val opt : 'a m -> 'a option m
+    val then_ : 'a m -> 'b m -> ('a * 'b) m
+    val ( -- ) : 'a m -> 'b m -> ('a * 'b) m
+    val plus : sep:'a m -> 'b m -> 'b list m
+    val star : sep:'a m -> 'b m -> 'b list m
+    val alt : 'a m -> 'a m -> 'a m
+    val ( || ) : 'a m -> 'a m -> 'a m
+    val end_of_string : unit m
+  end = struct include Ocaml_re_instance include Monad end
 end
 
 include Internal.Export
+
+let upto_a lit = 
+  Re.(shortest (seq [group (rep any); str lit])) |> Re.compile |> exec_re >>= fun g ->
+  Re.Group.get g 1 |> fun s -> 
+  (* Printf.printf "upto_a: %s\n%!" s; *)
+  get_input () >>= fun i -> drop (String.length s) i |> set_input >>= fun () ->
+  return s
+
+(** Convert an [Re.t] to a parser returning a string; uses Re group 0; uses bos and longest *)
+let re_to_p (re: Re.t) : string m = 
+  let re = compile Re.(seq [bos; longest re]) in  
+  exec_re re >>= fun g ->
+  Re.Group.get g 0 |> fun s -> 
+  get_input () >>= fun i -> drop (String.length s) i |> set_input >>= fun () ->
+  return s
+
+  

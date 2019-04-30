@@ -1,65 +1,82 @@
-(* a cleaned up version of ocaml grammar 2017 *)
-
-(* worth working with indexes rather than strings? *)
-
 open P0_lib
-open P0
-open Str_re
 
-let _ = String_util.test ()
+(** Helper to avoid dependence on associativity of -- *)
+let _3 ((x1,x2),x3) = (x1,x2,x3)
 
-let re s = re ~re:(Str.regexp s)
-
-let upto_re s = upto_re ~re:(Str.regexp s)
-
+(* a cleaned up version of ocaml grammar 2017 *)
 
 (* grammar of grammars ---------------------------------------------- *)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
+
+(*
+let _ = to_fun comm "(* asdasd *) beyond" |> fun (Some(_,y)) ->
+        Printf.printf "debug: (%s)\n" y
+*)
+
 (* ws: 0 or more; re is hopefully longest match (not true for Str) *)
-let rec ws s = (re "[ \n]*") --- (opt (comm --- ws)) @@ s
-let nt = re "[A-Z]+" 
-let lit = 
-  let sq = "'" in
-  let dq = "\"" in
-  ((a sq -- upto_a sq -- a sq) ||
-  (a dq -- upto_a dq -- a dq))
-  |>> fun x -> return (_3 x)
-let tm = 
-  lit |>> (fun x -> return @@ `Lit x) ||
-  (* allow a single question mark for terminals *)
-  (a"?" -- re"[a-z_][a-zA-Z0-9]*") |>> fun (x,y) -> return @@ `Qu(x,y)
-let sym = 
-  (nt |>> fun x -> return (`NT x)) || 
-  (tm |>> fun x -> return (`TM x))
+let ws = 
+  let ws_regexp = Re.(rep (set " \n")) in
+  let rec f () = 
+    re_to_p ws_regexp >>= fun _ ->
+    opt (comm >>= fun _ -> f ()) >>= fun _ -> return ()
+  in
+  f ()
+
+(** This just to avoid type var error msgs *)
+module Make() : sig end = struct
+
+  let nt = re_to_p Re.(rep1 @@ rg 'A' 'Z')
+
+  let lit = 
+    let sq = "'" in
+    let dq = "\"" in
+    ((a sq -- upto_a sq -- a sq) ||
+     (a dq -- upto_a dq -- a dq))
+    >>= fun x -> return (_3 x)
+
+  let tm_regexp = Re.(seq [char '?';rep lower])
+
+  let tm : [`Lit of string * string * string | `Qu of string ] m = 
+    (lit >>= fun x -> return @@ `Lit x) ||
+    (re_to_p tm_regexp >>= fun y -> `Qu(y) |> return)
+
+  let sym = 
+    (nt >>= fun x -> return (`NT x)) || 
+    (tm >>= fun x -> return (`TM x))
+
+  let syms = plus ~sep:ws sym
+
+  let bar = ws -- re_to_p (Re.char '|') -- ws 
+
+  let rhs = plus ~sep:bar syms
+
+  let rule = 
+    sym -- (ws -- a "->" -- ws) -- rhs >>= fun x -> 
+    _3 x |> fun (sym,_,rhs) -> return (sym,rhs)
+
+  let rules = star ~sep:(ws -- a";" -- ws) rule 
+
+  let grammar = ws -- rules -- ws >>= fun x -> _3 x |> fun (_,x2,_) -> return x2
+
+
+
+
+  (* let vnames = plus ~sep:(a",") (re"[a-z_][a-z0-9_]*")
+     //let syms' = syms -- opt (ws -- a"//" -- opt (ws -- vnames)) *)
+
+
 (*
 let var_eq = 
   let v = re "[a-z][a-z0-9]*" in
   let v_eq = v -- a"=" in
-  opt v_eq -- sym |>> fun (v,s) -> return (v,s)
+  opt v_eq -- sym >>= fun (v,s) -> return (v,s)
 *)
-let syms = plus ~sep:ws sym
-(* let vnames = plus ~sep:(a",") (re"[a-z_][a-z0-9_]*")
-//let syms' = syms -- opt (ws -- a"//" -- opt (ws -- vnames)) *)
-let bar = ws -- a "|" -- ws 
-let rhs = plus ~sep:bar syms  (* plus and star are greedy *)
-let rule = 
-  sym -- (ws -- a "->" -- ws) -- rhs |>> fun x -> 
-  _3 x |> fun (sym,_,rhs) -> return (sym,rhs)
-let rules = star ~sep:(ws -- a";" -- ws) rule 
-let grammar = ws -- rules -- ws |>> fun x -> _3 x |> fun (_,x2,_) -> return x2
-
 
 (* example ---------------------------------------------------------- *)
 
-let _ = 
-  let example = {|?w|} in
-
-  let _ = tm example in
-
-  let _ = example |> a "?" -- re"[a-z]+" in
-
-  let example = {|
+  let _ = 
+    let example = {|
 
 (* the expressions we want to parse at top-level *)
 S -> ?w DEFN ?w ?eof
@@ -68,17 +85,23 @@ S -> ?w DEFN ?w ?eof
 
 |} in
 
-  let r = grammar example in
-  assert (
-    match r with
-    | None -> false
-    | Some(_,s) -> 
-      match s with 
-      | "" -> true
-      | _ -> (print_endline s; false));
-  ()
-[@@ocaml.warning "-8"]
+    let r = to_fun grammar example in
+    (* following fails if we don't parse the entire string *)
+    assert (
+      match r with
+      | None -> false
+      | Some(_,s) -> 
+        match s with 
+        | "" -> true
+        | _ -> (print_endline s; false));
+    ()
+  [@@ocaml.warning "-8"]
 
+end
+
+module X = Make()
+
+(*
 
 (* ocaml grammar ---------------------------------------------------- *)
 
@@ -408,15 +431,15 @@ sys	0m0.016s
 
 (* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
 
-let rec times s = (plus ~sep:(a"*") atomic |>> fun es -> return (`Times es)) s
+let rec times s = (plus ~sep:(a"*") atomic >>= fun es -> return (`Times es)) s
 
-and plus_ s = (plus ~sep:(a"+") times |>> fun es -> return (`Plus es)) s
+and plus_ s = (plus ~sep:(a"+") times >>= fun es -> return (`Plus es)) s
 
 and atomic s = (
   num || 
-  (a"(" -- plus_ -- a")" |>> fun ((_,x),_) -> return (`Bra x))) s
+  (a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (`Bra x))) s
 
-and num s = (re"[0-9]+" |>> fun x -> return (`Int (int_of_string x))) s
+and num s = (re"[0-9]+" >>= fun x -> return (`Int (int_of_string x))) s
 
 
 let test () = ("1+2*3*4+5*6" |> plus_)
@@ -428,11 +451,11 @@ let dq = "\""
 let comma = ","
 let eol = "\n"
 let rec inside sofar s = (
-  upto_a dq -- a dq |>> fun (x,_) ->
-  (opt (a dq) |>> function
+  upto_a dq -- a dq >>= fun (x,_) ->
+  (opt (a dq) >>= function
     | None -> return (`Quoted (sofar^x))
     | Some _ -> inside (sofar^x^dq))) s
-let quoted = (a dq -- inside "") |>> fun (_,x) -> return x
+let quoted = (a dq -- inside "") >>= fun (_,x) -> return x
 let unquoted_terminators = ("["^comma^dq^eol^"]")
 (* NOTE the following will parse an empty line as an unquoted provided
    followed by an unquoted terminator; an empty field as an unquoted
@@ -440,7 +463,7 @@ let unquoted_terminators = ("["^comma^dq^eol^"]")
    FIXME we may want unquoted to also parse the empty line upto the end of string
    *)
 let unquoted s = (
-  upto_re unquoted_terminators |>> fun x -> return (`Unquoted x)) s
+  upto_re unquoted_terminators >>= fun x -> return (`Unquoted x)) s
 (* the last unquoted field can extend to the end of the string,
    provided no terminators are found *)
 let last_unquoted_field s = 
@@ -448,7 +471,7 @@ let last_unquoted_field s =
   | None -> Some(`Unquoted s,"")
   | Some _ -> None  
 let field = quoted || unquoted || last_unquoted_field
-let row = plus ~sep:(a comma) field  (* see unquoted || (a"" |>> fun _ -> return []) *)
+let row = plus ~sep:(a comma) field  (* see unquoted || (a"" >>= fun _ -> return []) *)
 let rows = star ~sep:(a eol) row
 
 let _ = 
@@ -507,4 +530,5 @@ d,"e,f,g",h
 i,"jk""l",
 |} 
 end
+*)
 *)

@@ -1,0 +1,4 @@
+(executable
+  (public_name p0_example)
+  (flags (:standard -w -27-8-40-32-39))
+  (libraries p0_lib))
