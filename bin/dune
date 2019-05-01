@@ -1,4 +1,5 @@
 (executable
   (public_name p0_example)
   (flags (:standard -w -27-8-40-32-39))
-  (libraries p0_lib))
+  (preprocess (pps ppx_sexp_conv))
+  (libraries core_kernel ppx_sexp_conv p0_lib))

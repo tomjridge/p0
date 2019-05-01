@@ -9,99 +9,95 @@ let _3 ((x1,x2),x3) = (x1,x2,x3)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 
-(*
-let _ = to_fun comm "(* asdasd *) beyond" |> fun (Some(_,y)) ->
-        Printf.printf "debug: (%s)\n" y
-*)
-
-(* ws: 0 or more; re is hopefully longest match (not true for Str) *)
+(* includes comments *)
 let ws = 
   let ws_regexp = Re.(rep (set " \n")) in
+  let ws = re ws_regexp in
   let rec f () = 
-    re_to_p ws_regexp >>= fun _ ->
+    ws >>= fun _ ->
     opt (comm >>= fun _ -> f ()) >>= fun _ -> return ()
   in
   f ()
 
 (** This just to avoid type var error msgs *)
-module Make() : sig end = struct
+module Grammar_type = struct
+  open Core_kernel
+  type nt = string [@@deriving sexp]
+  type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
+  type sym = Nt of nt | Tm of tm [@@deriving sexp]
+  type rhs = sym list [@@deriving sexp]
+  type rule = nt * rhs list [@@deriving sexp]
+  type grammar = rule list [@@deriving sexp]
 
-  let nt = re_to_p Re.(rep1 @@ rg 'A' 'Z')
+  let grammar_to_string g = 
+    g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
+end
+let grammar_to_string = Grammar_type.grammar_to_string
 
-  let lit = 
+module Grammar_of_grammars = struct 
+  open Grammar_type
+  let nt = re Re.(rep1 (rg 'A' 'Z'))
+
+  let tm_lit = 
     let sq = "'" in
     let dq = "\"" in
     ((a sq -- upto_a sq -- a sq) ||
      (a dq -- upto_a dq -- a dq))
     >>= fun x -> return (_3 x)
 
-  let tm_regexp = Re.(seq [char '?';rep lower])
+  let tm_re = re Re.(seq [char '?';rep1 (alt [alnum;char '_'])])
 
-  let tm : [`Lit of string * string * string | `Qu of string ] m = 
-    (lit >>= fun x -> return @@ `Lit x) ||
-    (re_to_p tm_regexp >>= fun y -> `Qu(y) |> return)
+  let tm = 
+    (tm_lit >>= fun x -> Tm_lit(x) |> return) ||
+    (tm_re >>= fun y -> Tm_qu(y) |> return)
 
   let sym = 
-    (nt >>= fun x -> return (`NT x)) || 
-    (tm >>= fun x -> return (`TM x))
+    (nt >>= fun x -> return (Nt x)) || 
+    (tm >>= fun x -> return (Tm x))
 
   let syms = plus ~sep:ws sym
 
-  let bar = ws -- re_to_p (Re.char '|') -- ws 
+  let bar = 
+    re (Re.char '|') |> fun bar ->
+    ws -- bar -- ws 
 
   let rhs = plus ~sep:bar syms
 
   let rule = 
-    sym -- (ws -- a "->" -- ws) -- rhs >>= fun x -> 
-    _3 x |> fun (sym,_,rhs) -> return (sym,rhs)
+    let arrow = ws -- a "->" -- ws in
+    nt -- arrow -- rhs >>= fun ((nt,_),rhs) -> 
+    return (nt,rhs)
 
-  let rules = star ~sep:(ws -- a";" -- ws) rule 
+  let rules = 
+    let sep = ws -- a";" -- ws in
+    star ~sep rule 
 
-  let grammar = ws -- rules -- ws >>= fun x -> _3 x |> fun (_,x2,_) -> return x2
+  let grammar = 
+    ws -- rules -- ws >>= fun ((_,rs),_) -> return rs
 
+  let _ : (nt * sym list list) list m = grammar
+end
 
+let grammar = Grammar_of_grammars.grammar
 
-
-  (* let vnames = plus ~sep:(a",") (re"[a-z_][a-z0-9_]*")
-     //let syms' = syms -- opt (ws -- a"//" -- opt (ws -- vnames)) *)
-
-
-(*
-let var_eq = 
-  let v = re "[a-z][a-z0-9]*" in
-  let v_eq = v -- a"=" in
-  opt v_eq -- sym >>= fun (v,s) -> return (v,s)
-*)
 
 (* example ---------------------------------------------------------- *)
 
-  let _ = 
-    let example = {|
+let example = {|
 
 (* the expressions we want to parse at top-level *)
 S -> ?w DEFN ?w ?eof
 | ?w TYPEDEFINITIONS ?w ?eof
 | ?w TYPEXPR ?w ?eof
 
-|} in
+|} 
 
-    let r = to_fun grammar example in
-    (* following fails if we don't parse the entire string *)
-    assert (
-      match r with
-      | None -> false
-      | Some(_,s) -> 
-        match s with 
-        | "" -> true
-        | _ -> (print_endline s; false));
-    ()
-  [@@ocaml.warning "-8"]
+let _ = 
+  to_fun grammar example |> function
+  | None -> failwith __LOC__
+  | Some(g,_) -> 
+    Printf.printf "Grammar example parsed successfully (%s)\n%s\n\n%!" __FILE__ (grammar_to_string g)
 
-end
-
-module X = Make()
-
-(*
 
 (* ocaml grammar ---------------------------------------------------- *)
 
@@ -403,30 +399,28 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 |}
 
 let test () = 
-  let _ = grammar g |> function 
+  let _ = to_fun grammar g |> function 
     | Some (_x,s) -> 
       assert (if s="" then true else (print_endline s; false) ) 
     | None -> failwith __LOC__ 
   in
   Pervasives.print_string "Parsing grammar (x100)...";
-  for _i = 1 to 100 do ignore(grammar g) done;
+  for _i = 1 to 100 do ignore(to_fun grammar g) done;
   print_endline "finished!"
 
 let _ = test ()
 
 (*
 
-$ time ./a.out
-Parsing grammar (x100)...
-finished!
+Parsing grammar (x100)...finished!
 
-real	0m0.228s
-user	0m0.212s
-sys	0m0.016s
+real	0m0.199s
+user	0m0.166s
+sys	0m0.027s
 
 *)
 
-
+(*
 (* arithmetic ------------------------------------------------------- *)
 
 (* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
