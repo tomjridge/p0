@@ -469,25 +469,21 @@ include struct
 
   let num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
 
-  (** NOTE we break the rec by passing atomic as an extra arg; not
-     sure this is cleaner than the previous version... *)
-  let arith ~atomic =
-    let times = plus ~sep:(a"*") atomic >>= fun es -> return (Times es) in
-    let plus_ = plus ~sep:(a"+") times >>= fun es -> return (Plus es) in
-    let atomic = 
-      (num || 
-       (a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (Bracket x)))
-      >>= fun x -> return (Atomic x) 
-    in
-    (times,plus_,atomic)
+  let dummy = of_fun (fun i -> failwith __LOC__)
+
+  (* atomic is a placeholder that will be filled in later *)
+  let atomic = ref @@ dummy
+
+  (* the delay in times is to avoid the atomic deref before it is filled in *)
+  let times = delay >>= fun _ -> 
+    plus ~sep:(a"*") !atomic >>= fun es -> return (Times es)
+  let plus_ = plus ~sep:(a"+") times  >>= fun es -> return (Plus es)
+  let bracket = a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (Bracket x)
+  let atomic' = (num || bracket)      >>= fun x -> return (Atomic x) 
 
   let arith = 
-    let rec atomic () =  
-      delay >>= fun _ -> arith ~atomic:(atomic ()) |> fun (_,_,a) -> a
-    in
-    let plus_ = arith ~atomic:(atomic ()) |> fun (_,p,_) -> p in
+    atomic := atomic';
     plus_
-  (* The above is a bit too fancy FIXME *)
 
   let _ = arith
 
@@ -498,20 +494,6 @@ let test () =
   Printf.printf "Arithmetic example: \n%s\n\n%!" (a |> arith_to_string)
 
 let _ = test()
-
-(* old
-  let rec times () = plus ~sep:(a"*") (atomic()) >>= fun es -> return (Times es)
-
-  and plus_ () = plus ~sep:(a"+") (times()) >>= fun es -> return (Plus es)
-
-  (* NOTE the use of delay *)
-  and atomic () = delay >>= fun _ -> 
-    (num || 
-     (a"(" -- plus_ () -- a")" >>= fun ((_,x),_) -> return (Bracket x)))
-    >>= fun x -> return (Atomic x)
-
-  let arith = plus_ ()
-*)
 
 
 (* csv -------------------------------------------------------------- *)
@@ -525,19 +507,12 @@ end
 
 module R = struct
   open C
-  let dq = Re.(char dq)
-  let not_dq = re Re.(rep (compl [dq]))
-  let comma = Re.(char comma)
-  let eol = Re.(char C.eol)
+  let dq = re Re.(char dq)
+  let not_dq = re Re.(rep (compl [char C.dq]))
+  let comma = re Re.(char comma)
+  let eol = re Re.(char C.eol)
 end
 open R
-
-module P = struct
-  let dq = re dq
-  let comma = re comma
-  let eol = re eol
-end
-open P
 
 module Csv_type = struct
   open Core_kernel      
