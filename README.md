@@ -1,5 +1,20 @@
-# p0: simple parsing library
+# p0: a simple parsing library
 
-OCamldoc at https://tomjridge.github.io/p0/
+## Introductory example (CSV parser)
 
-For an example of use, see file ./bin/p0_example.ml
+![1556706287321](README.assets/1556706287321.png)
+
+## Quick links
+
+* OCamldoc at <https://tomjridge.github.io/p0/> . 
+* Examples of use in bin/p0_example.ml
+
+## API fragment
+
+![1556706452225](README.assets/1556706452225.png)
+
+## Features
+
+* Returns at most one result (the monad is the option monad, with None indicating a failed parse)
+* Single file library (with a dependency on ocaml-re). 
+* Good integration with ocaml-re

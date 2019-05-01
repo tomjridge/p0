@@ -497,6 +497,7 @@ end
 
 open Csv_type
 
+(** A CSV parser. NOTE dq is "double quote" *)
 let rec inside sofar =
   not_dq >>= fun s ->
   dq >>= fun _ ->
@@ -506,25 +507,28 @@ let rec inside sofar =
 
 let quoted = (dq -- inside "") >>= fun (_,x) -> return x
 
-(* NOTE the following will parse an empty line as an unquoted provided
-   followed by an unquoted terminator; an empty field as an unquoted
-
-   FIXME we may want unquoted to also parse the empty line upto the end of string
-   *)
-
 let unquoted_terminator = Re.(alt[char '"'; char ','; char '\n'])
 
 let unquoted = 
   re Re.(rep (compl [unquoted_terminator])) >>= fun s ->
   return (U s)
 
-(* the last unquoted field can extend to the end of the string,
-   provided no terminators are found *)
-
 let field = quoted || unquoted 
+
 let row = plus ~sep:comma field 
   
 let rows = star ~sep:eol row
+
+
+
+(* NOTE unquoted: the following will parse an empty line as an unquoted provided
+   followed by an unquoted terminator; an empty field as an unquoted
+
+   FIXME we may want unquoted to also parse the empty line upto the end of string
+   *)
+
+(* NOTE the last unquoted field can extend to the end of the string,
+   provided no terminators are found *)
 
 let test_csv csv_as_string expected = 
   assert(to_fun rows csv_as_string |> function
