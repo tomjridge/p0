@@ -3,69 +3,70 @@ open P0_lib
 (** Helper to avoid dependence on associativity of -- *)
 let _3 ((x1,x2),x3) = (x1,x2,x3)
 
-(* a cleaned up version of ocaml grammar 2017 *)
-
 (* grammar of grammars ---------------------------------------------- *)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 
 (* includes comments *)
 let ws = 
-  let ws_regexp = Re.(rep (set " \n")) in
-  let ws = re ws_regexp in
+  let whitespace = re Re.(rep (set " \n")) in
   let rec f () = 
-    ws >>= fun _ ->
+    whitespace >>= fun _ ->
     opt (comm >>= fun _ -> f ()) >>= fun _ -> return ()
   in
   f ()
 
-(** This just to avoid type var error msgs *)
-module Grammar_type = struct
-  open Core_kernel
-  type nt = string [@@deriving sexp]
-  type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
-  type sym = Nt of nt | Tm of tm [@@deriving sexp]
-  type rhs = sym list [@@deriving sexp]
-  type rule = nt * rhs list [@@deriving sexp]
-  type grammar = rule list [@@deriving sexp]
-
-  let grammar_to_string g = 
-    g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
-end
-let grammar_to_string = Grammar_type.grammar_to_string
-
-(** Make pretty-printing slightly more human by omitting some brackets *)
-module Grammar_human = struct
-  include struct 
+(** For pretty-printing *)
+module Internal = struct
+  module Grammar_type = struct
     open Core_kernel
     type nt = string [@@deriving sexp]
-    type sym = string [@@deriving sexp]
+    type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
+    type sym = Nt of nt | Tm of tm [@@deriving sexp]
     type rhs = sym list [@@deriving sexp]
     type rule = nt * rhs list [@@deriving sexp]
     type grammar = rule list [@@deriving sexp]
+
+    let grammar_to_string g = 
+      g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
   end
+  let grammar_to_string = Grammar_type.grammar_to_string
 
-  let of_grammar (g:Grammar_type.grammar) : grammar = 
-    let open Grammar_type in 
-    let rec conv_g = function
-      | rs -> List.map conv_rule rs
-    and conv_rule (nt,rhs) = (nt,List.map conv_rhs rhs)
-    and conv_rhs syms = List.map conv_sym syms 
-    and conv_sym = function
-      | Nt nt -> nt
-      | Tm (Tm_lit (s1,s2,s3)) -> s2 (* s1^s2^s3 *)
-      | Tm (Tm_qu s) -> s
-    in
-    conv_g g
+  (** Make pretty-printing slightly more human by omitting some brackets *)
+  module Grammar_human = struct
+    include struct 
+      open Core_kernel
+      type nt = string [@@deriving sexp]
+      type sym = string [@@deriving sexp]
+      type rhs = sym list [@@deriving sexp]
+      type rule = nt * rhs list [@@deriving sexp]
+      type grammar = rule list [@@deriving sexp]
+    end
 
-  (* but strings with quotes are still double quoted *)
+    let of_grammar (g:Grammar_type.grammar) : grammar = 
+      let open Grammar_type in 
+      let rec conv_g = function
+        | rs -> List.map conv_rule rs
+      and conv_rule (nt,rhs) = (nt,List.map conv_rhs rhs)
+      and conv_rhs syms = List.map conv_sym syms 
+      and conv_sym = function
+        | Nt nt -> nt
+        | Tm (Tm_lit (s1,s2,s3)) -> s2 (* s1^s2^s3 *)
+        | Tm (Tm_qu s) -> s
+      in
+      conv_g g
 
-  let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum
+    (* but strings with quotes are still double quoted *)
+
+    let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum
+  end
+  let grammar_to_string = Grammar_human.grammar_to_string
 end
-let grammar_to_string = Grammar_human.grammar_to_string
+open Internal
 
-
-
+(** Parse a textual grammar defn (the example below is the defn of the
+   grammar used in the OCaml manual, which is used to express the
+   grammar of OCaml itself) *)
 module Grammar_of_grammars = struct 
   open Grammar_type
   let nt = re Re.(rep1 (rg 'A' 'Z'))
@@ -89,9 +90,7 @@ module Grammar_of_grammars = struct
 
   let syms = plus ~sep:ws sym
 
-  let bar = ws -- a"|" -- ws 
-
-  let rhs = plus ~sep:bar syms
+  let rhs = plus ~sep:(ws -- a"|" -- ws) syms
 
   let rule = nt -- (ws -- a "->" -- ws) -- rhs 
     >>= fun ((nt,_),rhs) -> return (nt,rhs)
@@ -121,7 +120,8 @@ let _ =
   to_fun grammar example |> function
   | None -> failwith __LOC__
   | Some(g,_) -> 
-    Printf.printf "Grammar example parsed successfully (%s)\n%s\n\n%!" __FILE__ (grammar_to_string g)
+    Printf.printf "Grammar example parsed successfully (%s)\n%s\n\n%!" 
+      __FILE__ (grammar_to_string g)
 
 
 (* ocaml grammar ---------------------------------------------------- *)
@@ -450,6 +450,7 @@ sys	0m0.027s
 
 (* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
 
+(** For pretty-printing *)
 module Arith_type = struct
   open Core_kernel
   type arith = 
@@ -469,28 +470,28 @@ include struct
 
   let num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
 
-  let dummy = of_fun (fun i -> failwith __LOC__)
-
   (* atomic is a placeholder that will be filled in later *)
-  let atomic = ref @@ dummy
+  let atomic = 
+    let dummy = of_fun (fun i -> failwith __LOC__) in
+    ref dummy
 
-  (* the delay in times is to avoid the atomic deref before it is filled in *)
-  let times = delay >>= fun _ -> 
+  (* the delay is to avoid the atomic deref before it is filled in *)
+  let product = delay >>= fun _ -> 
     plus ~sep:(a"*") !atomic >>= fun es -> return (Times es)
-  let plus_ = plus ~sep:(a"+") times  >>= fun es -> return (Plus es)
-  let bracket = a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (Bracket x)
-  let atomic' = (num || bracket)      >>= fun x -> return (Atomic x) 
+  let sum = plus ~sep:(a"+") product >>= fun es -> return (Plus es)
+  let bracket = a"(" -- sum -- a")"  >>= fun ((_,x),_) -> return (Bracket x)
+  let atomic' = (num || bracket)     >>= fun x -> return (Atomic x) 
 
   let arith = 
     atomic := atomic';
-    plus_
+    sum
 
   let _ = arith
 
 end
 
 let test () = 
-  (arith |> to_fun) ("1+2*3*4+5*6") |> fun (Some(a,"")) -> 
+  (arith |> to_fun) "1+2*3*4+5*6" |> fun (Some(a,"")) -> 
   Printf.printf "Arithmetic example: \n%s\n\n%!" (a |> arith_to_string)
 
 let _ = test()
@@ -514,6 +515,7 @@ module R = struct
 end
 open R
 
+(** For pretty-printing *)
 module Csv_type = struct
   open Core_kernel      
   type field = Q of string | U of string [@@deriving sexp]
@@ -526,37 +528,33 @@ end
 open Csv_type
 
 (** A CSV parser. NOTE dq is "double quote" *)
-let rec inside sofar =
-  not_dq >>= fun s ->
-  dq >>= fun _ ->
-  opt dq >>= function
-  | None -> return (Q (sofar^s))
-  | Some _ -> inside (sofar^s^String.make 1 C.dq)
+module Csv_parser = struct
+  (** [inside] matches the inside of a quoted field; two consecutive
+      double quotes encodes a single dquote *)
+  let rec inside sofar =
+    not_dq >>= fun s ->
+    dq >>= fun _ ->
+    opt dq >>= function
+    | None -> return (Q (sofar^s))
+    | Some _ -> inside (sofar^s^String.make 1 C.dq)
 
-let quoted = (dq -- inside "") >>= fun (_,x) -> return x
+  let quoted = (dq -- inside "") >>= fun (_,x) -> return x
 
-let unquoted_terminator = Re.(alt[char '"'; char ','; char '\n'])
+  let unquoted_terminator = Re.(alt[char '"'; char ','; char '\n'])
 
-let unquoted = 
-  re Re.(rep (compl [unquoted_terminator])) >>= fun s ->
-  return (U s)
+  let unquoted = 
+    re Re.(rep (compl [unquoted_terminator])) >>= fun s ->
+    return (U s)
 
-let field = quoted || unquoted 
+  let field = quoted || unquoted 
 
-let row = plus ~sep:comma field 
-  
-let rows = star ~sep:eol row
+  let row = plus ~sep:comma field 
+
+  let rows = star ~sep:eol row
+end
 
 
-
-(* NOTE unquoted: the following will parse an empty line as an unquoted provided
-   followed by an unquoted terminator; an empty field as an unquoted
-
-   FIXME we may want unquoted to also parse the empty line upto the end of string
-   *)
-
-(* NOTE the last unquoted field can extend to the end of the string,
-   provided no terminators are found *)
+let rows = Csv_parser.rows
 
 let test_csv csv_as_string expected = 
   assert(to_fun rows csv_as_string |> function
