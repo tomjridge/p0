@@ -404,9 +404,9 @@ let test () =
       assert (if s="" then true else (print_endline s; false) ) 
     | None -> failwith __LOC__ 
   in
-  Pervasives.print_string "Parsing grammar (x100)...";
+  Printf.printf "Parsing grammar (x100)...%!";
   for _i = 1 to 100 do ignore(to_fun grammar g) done;
-  print_endline "finished!"
+  Printf.printf "finished!\n\n%!"
 
 let _ = test ()
 
@@ -420,109 +420,146 @@ sys	0m0.027s
 
 *)
 
-(*
 (* arithmetic ------------------------------------------------------- *)
 
 (* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
 
-let rec times s = (plus ~sep:(a"*") atomic >>= fun es -> return (`Times es)) s
+module Arith_type = struct
+  open Core_kernel
+  type arith = 
+      Times of arith list
+    | Plus of arith list
+    | Atomic of atomic  [@@deriving sexp]
+  and atomic = Int of int | Bracket of arith [@@deriving sexp]
+  let arith_to_string x = 
+    x |> sexp_of_arith |> Core_kernel.Sexp.to_string_hum 
+end
 
-and plus_ s = (plus ~sep:(a"+") times >>= fun es -> return (`Plus es)) s
+let arith_to_string = Arith_type.arith_to_string
 
-and atomic s = (
-  num || 
-  (a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (`Bra x))) s
+include struct
+  open Arith_type
+  let delay = a ""
 
-and num s = (re"[0-9]+" >>= fun x -> return (`Int (int_of_string x))) s
+  let rec times () = plus ~sep:(a"*") (atomic()) >>= fun es -> return (Times es)
 
+  and plus_ () = plus ~sep:(a"+") (times()) >>= fun es -> return (Plus es)
 
-let test () = ("1+2*3*4+5*6" |> plus_)
+  (* NOTE the use of delay *)
+  and atomic () = delay >>= fun _ -> 
+    (num || 
+     (a"(" -- plus_ () -- a")" >>= fun ((_,x),_) -> return (Bracket x)))
+    >>= fun x -> return (Atomic x)
 
+  and num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
+end
+
+let test () = 
+  plus_ () |> to_fun |> fun p -> 
+  p ("1+2*3*4+5*6") |> fun (Some(a,"")) -> 
+  Printf.printf "Arithmetic example: \n%s\n\n%!" (a |> arith_to_string)
+
+let _ = test()
 
 (* csv -------------------------------------------------------------- *)
 
-let dq = "\""
-let comma = ","
-let eol = "\n"
-let rec inside sofar s = (
-  upto_a dq -- a dq >>= fun (x,_) ->
-  (opt (a dq) >>= function
-    | None -> return (`Quoted (sofar^x))
-    | Some _ -> inside (sofar^x^dq))) s
-let quoted = (a dq -- inside "") >>= fun (_,x) -> return x
-let unquoted_terminators = ("["^comma^dq^eol^"]")
+(* chars *)
+module C = struct
+  let dq = '"'
+  let comma = ','
+  let eol = '\n'
+end
+
+module R = struct
+  open C
+  let dq = Re.(char dq)
+  let not_dq = re Re.(rep (compl [dq]))
+  let comma = Re.(char comma)
+  let eol = Re.(char C.eol)
+end
+open R
+
+module P = struct
+  let dq = re dq
+  let comma = re comma
+  let eol = re eol
+end
+open P
+
+module Csv_type = struct
+  open Core_kernel      
+  type field = Q of string | U of string [@@deriving sexp]
+  type row = field list [@@deriving sexp]
+  type csv = row list [@@deriving sexp]
+  let csv_to_string x =
+    x |> sexp_of_csv |> Core_kernel.Sexp.to_string_hum 
+end
+
+open Csv_type
+
+let rec inside sofar =
+  not_dq >>= fun s ->
+  dq >>= fun _ ->
+  opt dq >>= function
+  | None -> return (Q (sofar^s))
+  | Some _ -> inside (sofar^s^String.make 1 C.dq)
+
+let quoted = (dq -- inside "") >>= fun (_,x) -> return x
+
 (* NOTE the following will parse an empty line as an unquoted provided
    followed by an unquoted terminator; an empty field as an unquoted
 
    FIXME we may want unquoted to also parse the empty line upto the end of string
    *)
-let unquoted s = (
-  upto_re unquoted_terminators >>= fun x -> return (`Unquoted x)) s
+
+let unquoted_terminator = Re.(alt[char '"'; char ','; char '\n'])
+
+let unquoted = 
+  re Re.(rep (compl [unquoted_terminator])) >>= fun s ->
+  return (U s)
+
 (* the last unquoted field can extend to the end of the string,
    provided no terminators are found *)
-let last_unquoted_field s = 
-  match search_forward ~re:(Str.regexp unquoted_terminators) ~off:0 s with
-  | None -> Some(`Unquoted s,"")
-  | Some _ -> None  
-let field = quoted || unquoted || last_unquoted_field
-let row = plus ~sep:(a comma) field  (* see unquoted || (a"" >>= fun _ -> return []) *)
-let rows = star ~sep:(a eol) row
+
+let field = quoted || unquoted 
+let row = plus ~sep:comma field 
+  
+let rows = star ~sep:eol row
+
+let test_csv csv_as_string expected = 
+  assert(to_fun rows csv_as_string |> function
+  | None -> false
+  | Some (c,_) -> c=expected)
+
+let _ = 
+  Printf.printf "Example csv parse: %s\n\n%!" 
+    (to_fun rows {|
+a,b,c|} |> fun (Some(csv,_)) -> csv_to_string csv)
 
 let _ = 
   print_string "Testing csv parser...";
-  assert(
-  rows {|
-a,b,c
-d,"e,f,g",h
-i,"jk""l",
-|} = Some([
-        [`Unquoted ""]; [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
-        [`Unquoted "d"; `Quoted "e,f,g"; `Unquoted "h"];
-        [`Unquoted "i"; `Quoted "jk\"l"; `Unquoted ""];
-        [`Unquoted ""]
-      ],
-        ""));
   
-  assert(
-    rows {|
-a,b,c
-d,e,f|} = Some([
-        [`Unquoted ""];
-        [`Unquoted "a"; `Unquoted "b"; `Unquoted "c"];
-        [`Unquoted "d"; `Unquoted "e"; `Unquoted "f"]],"")); 
-  print_endline "finished!"
 
+  test_csv 
+    {|
+a,b,c|} 
+    [
+      [U ""]; 
+      [U "a"; U "b"; U "c"];
+    ];
 
-(* NOTE need Tjr_substring
-module Manual_testing_ = functor(_: sig end) -> struct
-  let test = {|"jk""l"|} |> quoted
-
-  let _ = unquoted "\n"
-
-  let _ = 
-    Tjr_substring.(
-      Str.(
-        upto_re ~re:(regexp "x") {s_="x";i_=0})) [@@warning "-40"]
-
-  let _ = (upto_re unquoted_terminators "hx\n")
-
-  let test = (unquoted {|h
-                       |}) |> fun x -> x;;
-
-  let test = row {|d,"e,f,g",h
-                 |}
-
-  (* tuareg doesn't seem to like the string syntax - so eval region *)
-  let test = rows {|
-a,b,c
-d,"e,f,g",h
-|}
-
-  let test = rows {|
+  test_csv 
+    {|
 a,b,c
 d,"e,f,g",h
 i,"jk""l",
 |} 
-end
-*)
-*)
+    [
+      [U ""]; 
+      [U "a"; U "b"; U "c"];
+      [U "d"; Q "e,f,g"; U "h"];
+      [U "i"; Q "jk\"l"; U ""];
+      [U ""]
+    ];
+
+  print_endline "finished!"
