@@ -34,6 +34,38 @@ module Grammar_type = struct
 end
 let grammar_to_string = Grammar_type.grammar_to_string
 
+(** Make pretty-printing slightly more human by omitting some brackets *)
+module Grammar_human = struct
+  include struct 
+    open Core_kernel
+    type nt = string [@@deriving sexp]
+    type sym = string [@@deriving sexp]
+    type rhs = sym list [@@deriving sexp]
+    type rule = nt * rhs list [@@deriving sexp]
+    type grammar = rule list [@@deriving sexp]
+  end
+
+  let of_grammar (g:Grammar_type.grammar) : grammar = 
+    let open Grammar_type in 
+    let rec conv_g = function
+      | rs -> List.map conv_rule rs
+    and conv_rule (nt,rhs) = (nt,List.map conv_rhs rhs)
+    and conv_rhs syms = List.map conv_sym syms 
+    and conv_sym = function
+      | Nt nt -> nt
+      | Tm (Tm_lit (s1,s2,s3)) -> s2 (* s1^s2^s3 *)
+      | Tm (Tm_qu s) -> s
+    in
+    conv_g g
+
+  (* but strings with quotes are still double quoted *)
+
+  let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum
+end
+let grammar_to_string = Grammar_human.grammar_to_string
+
+
+
 module Grammar_of_grammars = struct 
   open Grammar_type
   let nt = re Re.(rep1 (rg 'A' 'Z'))
@@ -400,8 +432,8 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 
 let test () = 
   let _ = to_fun grammar g |> function 
-    | Some (_x,s) -> 
-      assert (if s="" then true else (print_endline s; false) ) 
+    | Some (g,"") -> 
+      Printf.printf "OCaml grammar parsed\n%s\\n\n%!" (g |> grammar_to_string)
     | None -> failwith __LOC__ 
   in
   Printf.printf "Parsing grammar (x100)...%!";
@@ -441,6 +473,39 @@ include struct
   open Arith_type
   let delay = a ""
 
+  let num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
+
+  (** NOTE we break the rec by passing atomic as an extra arg; not
+     sure this is cleaner than the previous version... *)
+  let arith ~atomic =
+    let times = plus ~sep:(a"*") atomic >>= fun es -> return (Times es) in
+    let plus_ = plus ~sep:(a"+") times >>= fun es -> return (Plus es) in
+    let atomic = 
+      (num || 
+       (a"(" -- plus_ -- a")" >>= fun ((_,x),_) -> return (Bracket x)))
+      >>= fun x -> return (Atomic x) 
+    in
+    (times,plus_,atomic)
+
+  let arith = 
+    let rec atomic () =  
+      delay >>= fun _ -> arith ~atomic:(atomic ()) |> fun (_,_,a) -> a
+    in
+    let plus_ = arith ~atomic:(atomic ()) |> fun (_,p,_) -> p in
+    plus_
+  (* The above is a bit too fancy FIXME *)
+
+  let _ = arith
+
+end
+
+let test () = 
+  (arith |> to_fun) ("1+2*3*4+5*6") |> fun (Some(a,"")) -> 
+  Printf.printf "Arithmetic example: \n%s\n\n%!" (a |> arith_to_string)
+
+let _ = test()
+
+(* old
   let rec times () = plus ~sep:(a"*") (atomic()) >>= fun es -> return (Times es)
 
   and plus_ () = plus ~sep:(a"+") (times()) >>= fun es -> return (Plus es)
@@ -451,15 +516,9 @@ include struct
      (a"(" -- plus_ () -- a")" >>= fun ((_,x),_) -> return (Bracket x)))
     >>= fun x -> return (Atomic x)
 
-  and num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
-end
+  let arith = plus_ ()
+*)
 
-let test () = 
-  plus_ () |> to_fun |> fun p -> 
-  p ("1+2*3*4+5*6") |> fun (Some(a,"")) -> 
-  Printf.printf "Arithmetic example: \n%s\n\n%!" (a |> arith_to_string)
-
-let _ = test()
 
 (* csv -------------------------------------------------------------- *)
 
@@ -542,8 +601,6 @@ a,b,c|} |> fun (Some(csv,_)) -> csv_to_string csv)
 
 let _ = 
   print_string "Testing csv parser...";
-  
-
   test_csv 
     {|
 a,b,c|} 

@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>p0_example.ml</title>
+<meta name="generator" content="emacs 26.1; htmlfontify 0.21" />
+<style type="text/css"><!-- 
+body { font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  color: #232627;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.default   { font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  color: #232627;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.default a { font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  color: #232627;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.constant   { color: #008b8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.constant a { color: #008b8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.builtin   { color: #483d8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.builtin a { color: #483d8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.label   { color: #008b8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.label a { color: #008b8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.constructor   { font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  color: #232627;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.constructor a { font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  color: #232627;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.attribute   { color: #483d8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.attribute a { color: #483d8b;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.type   { color: #228b22;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.type a { color: #228b22;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.keyword   { color: #a020f0;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.keyword a { color: #a020f0;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.string   { color: #8b2252;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.string a { color: #8b2252;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.comment   { color: #b22222;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.comment a { color: #b22222;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.comment-delimiter   { color: #b22222;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.comment-delimiter a { color: #b22222;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.operator   { color: #a52a2a;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.operator a { color: #a52a2a;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.variable-name   { color: #a0522d;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.variable-name a { color: #a0522d;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.function-name   { color: #0000ff;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.function-name a { color: #0000ff;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.doc   { color: #8b2252;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.doc a { color: #8b2252;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.module   { color: #228b22;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.module a { color: #228b22;  font-family: Ubuntu Mono;  font-stretch: normal;  font-weight: 500;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+span.governing   { color: #000000;  font-weight: 700;  font-family: Ubuntu Mono;  font-stretch: normal;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: none; }
+span.governing a { color: #000000;  font-weight: 700;  font-family: Ubuntu Mono;  font-stretch: normal;  font-style: normal;  background: #fcfcfc;  font-size: 10pt;  text-decoration: underline; }
+ --></style>
+
+    <script type="text/javascript"><!--
+  // this function is needed to work around
+  // a bug in IE related to element attributes
+  function hasClass(obj)
+  {
+      var result = false;
+      if (obj.getAttributeNode("class") != null)
+      {
+          result = obj.getAttributeNode("class").value;
+      }
+      return result;
+  }
+
+  function stripe(id)
+  {
+      // the flag we'll use to keep track of
+      // whether the current row is odd or even
+      var even = false;
+
+      // if arguments are provided to specify the colors
+      // of the even & odd rows, then use them;
+      // otherwise use the following defaults:
+      var evenColor = arguments[1] ? arguments[1] : "#fff";
+      var oddColor  = arguments[2] ? arguments[2] : "#ddd";
+
+      // obtain a reference to the desired table
+      // if no such table exists, abort
+      var table = document.getElementById(id);
+      if (! table) { return; }
+
+      // by definition, tables can have more than one tbody
+      // element, so we'll have to get the list of child
+      // &lt;tbody&gt;s
+      var tbodies = table.getElementsByTagName("tbody");
+
+      // and iterate through them...
+      for (var h = 0; h < tbodies.length; h++)
+      {
+          // find all the &lt;tr&gt; elements...
+          var trs = tbodies[h].getElementsByTagName("tr");
+
+          // ... and iterate through them
+          for (var i = 0; i < trs.length; i++)
+          {
+              // avoid rows that have a class attribute
+              // or backgroundColor style
+              if (! hasClass(trs[i]) &&
+                  ! trs[i].style.backgroundColor)
+              {
+                  // get all the cells in this row...
+                  var tds = trs[i].getElementsByTagName("td");
+
+                  // and iterate through them...
+                  for (var j = 0; j < tds.length; j++)
+                  {
+                      var mytd = tds[j];
+
+                      // avoid cells that have a class attribute
+                      // or backgroundColor style
+                      if (! hasClass(mytd) &&
+                          ! mytd.style.backgroundColor)
+                      {
+                          mytd.style.backgroundColor =
+                            even ? evenColor : oddColor;
+                      }
+                  }
+              }
+              // flip from odd to even, or vice-versa
+              even =  ! even;
+          }
+      }
+  }
+
+  function toggle_invis( name )
+  {
+      var filter =
+        { acceptNode:
+          function( node )
+          { var classname = node.id;
+            if( classname )
+            { var classbase = classname.substr( 0, name.length );
+              if( classbase == name ) { return NodeFilter.FILTER_ACCEPT; } }
+            return NodeFilter.FILTER_SKIP; } };
+      var walker = document.createTreeWalker( document.body           ,
+                                              NodeFilter.SHOW_ELEMENT ,
+                                              filter                  ,
+                                              false                   );
+      while( walker.nextNode() )
+      {
+          var e = walker.currentNode;
+          if( e.style.display == "none" ) { e.style.display = "inline"; }
+          else                            { e.style.display = "none";   }
+      }
+  }
+--> </script>
+  </head>
+  <body onload="stripe('index'); return true;">
+
+<pre><span class="governing">open </span><span class="module">P0_lib</span>
+
+<span class="doc">(** Helper to avoid dependence on associativity of -- *)</span>
+<span class="governing">let</span> <span class="function-name">_3</span><span class="variable-name"> </span><span class="operator">((</span><span class="variable-name">x1</span><span class="operator">,</span><span class="variable-name">x2</span><span class="operator">),</span><span class="variable-name">x3</span><span class="operator">)</span> <span class="operator">=</span> <span class="operator">(</span>x1<span class="operator">,</span>x2<span class="operator">,</span>x3<span class="operator">)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">a cleaned up version of ocaml grammar 2017 </span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">grammar of grammars ---------------------------------------------- </span><span class="comment-delimiter">*)</span>
+
+<span class="governing">let</span> <span class="variable-name">comm</span> <span class="operator">=</span> a <span class="string">&quot;(*&quot;</span> <span class="operator">--</span> upto_a <span class="string">&quot;*)&quot;</span> <span class="operator">--</span> a <span class="string">&quot;*)&quot;</span>  <span class="comment-delimiter">(* </span><span class="comment">FIXME nested comments </span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">includes comments </span><span class="comment-delimiter">*)</span>
+<span class="governing">let</span> <span class="variable-name">ws</span> <span class="operator">=</span> 
+  <span class="governing">let</span> <span class="variable-name">ws_regexp</span> <span class="operator">=</span> <span class="module">Re.</span><span class="operator">(</span>rep <span class="operator">(</span>set <span class="string">&quot; \n&quot;</span><span class="operator">))</span> <span class="governing">in</span>
+  <span class="governing">let</span> <span class="variable-name">ws</span> <span class="operator">=</span> re ws_regexp <span class="governing">in</span>
+  <span class="governing">let</span> <span class="governing">rec</span> <span class="function-name">f</span><span class="variable-name"> </span><span class="operator">()</span> <span class="operator">=</span> 
+    ws <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">_</span> <span class="operator">-&gt;</span>
+    opt <span class="operator">(</span>comm <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">_</span> <span class="operator">-&gt;</span> f <span class="operator">())</span> <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">_</span> <span class="operator">-&gt;</span> return <span class="operator">()</span>
+  <span class="governing">in</span>
+  f <span class="operator">()</span>
+
+<span class="doc">(** This just to avoid type var error msgs *)</span>
+<span class="governing">module</span> <span class="module">Grammar_type</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">open </span><span class="module">Core_kernel</span>
+  <span class="governing">type</span> <span class="type">nt</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">type</span> <span class="type">tm</span> <span class="operator">=</span> <span class="constructor">Tm_lit</span> <span class="keyword">of</span> <span class="operator">(</span>string <span class="operator">*</span> string <span class="operator">*</span> string<span class="operator">)</span> <span class="operator">|</span> <span class="constructor">Tm_qu</span> <span class="keyword">of</span> string <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
+  <span class="governing">type</span> <span class="type">sym</span> <span class="operator">=</span> <span class="constructor">Nt</span> <span class="keyword">of</span> nt <span class="operator">|</span> <span class="constructor">Tm</span> <span class="keyword">of</span> tm <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
+  <span class="governing">type</span> <span class="type">rhs</span> <span class="operator">=</span> sym list <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">type</span> <span class="type">rule</span> <span class="operator">=</span> nt <span class="operator">*</span> rhs list <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">type</span> <span class="type">grammar</span> <span class="operator">=</span> rule list <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
+
+  <span class="governing">let</span> <span class="function-name">grammar_to_string</span><span class="variable-name"> g</span> <span class="operator">=</span> 
+    g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+<span class="governing">end</span>
+<span class="governing">let</span> <span class="variable-name">grammar_to_string</span> <span class="operator">=</span> <span class="module">Grammar_type.</span>grammar_to_string
+
+<span class="doc">(** Make pretty-printing slightly more human by omitting some brackets *)</span>
+<span class="governing">module</span> <span class="module">Grammar_human</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">include</span> <span class="governing">struct</span> 
+    <span class="governing">open </span><span class="module">Core_kernel</span>
+    <span class="governing">type</span> <span class="type">nt</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
+    <span class="governing">type</span> <span class="type">sym</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp]</span>
+    <span class="governing">type</span> <span class="type">rhs</span> <span class="operator">=</span> sym list <span class="attribute">[@@deriving sexp]</span>
+    <span class="governing">type</span> <span class="type">rule</span> <span class="operator">=</span> nt <span class="operator">*</span> rhs list <span class="attribute">[@@deriving sexp]</span>
+    <span class="governing">type</span> <span class="type">grammar</span> <span class="operator">=</span> rule list <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
+  <span class="governing">end</span>
+
+  <span class="governing">let</span> <span class="function-name">of_grammar</span><span class="variable-name"> </span><span class="operator">(</span><span class="variable-name">g</span><span class="operator">:</span><span class="module">Grammar_type.</span><span class="type">grammar</span><span class="operator">)</span> <span class="operator">:</span> <span class="type">grammar</span> <span class="operator">=</span> 
+    <span class="governing">let</span> <span class="governing">open </span><span class="module">Grammar_type</span> <span class="governing">in</span> 
+    <span class="governing">let</span> <span class="governing">rec</span> <span class="function-name">conv_g</span> <span class="operator">=</span> <span class="keyword">function</span>
+      <span class="operator">|</span> rs <span class="operator">-&gt;</span> <span class="module">List.</span>map conv_rule rs
+    <span class="governing">and</span> <span class="function-name">conv_rule</span><span class="variable-name"> </span><span class="operator">(</span><span class="variable-name">nt</span><span class="operator">,</span><span class="variable-name">rhs</span><span class="operator">)</span> <span class="operator">=</span> <span class="operator">(</span>nt<span class="operator">,</span><span class="module">List.</span>map conv_rhs rhs<span class="operator">)</span>
+    <span class="governing">and</span> <span class="function-name">conv_rhs</span><span class="variable-name"> syms</span> <span class="operator">=</span> <span class="module">List.</span>map conv_sym syms 
+    <span class="governing">and</span> <span class="function-name">conv_sym</span> <span class="operator">=</span> <span class="keyword">function</span>
+      <span class="operator">|</span> <span class="constructor">Nt</span> nt <span class="operator">-&gt;</span> nt
+      <span class="operator">|</span> <span class="constructor">Tm</span> <span class="operator">(</span><span class="constructor">Tm_lit</span> <span class="operator">(</span>s1<span class="operator">,</span>s2<span class="operator">,</span>s3<span class="operator">))</span> <span class="operator">-&gt;</span> s2 <span class="comment-delimiter">(* </span><span class="comment">s1^s2^s3 </span><span class="comment-delimiter">*)</span>
+      <span class="operator">|</span> <span class="constructor">Tm</span> <span class="operator">(</span><span class="constructor">Tm_qu</span> s<span class="operator">)</span> <span class="operator">-&gt;</span> s
+    <span class="governing">in</span>
+    conv_g g
+
+  <span class="comment-delimiter">(* </span><span class="comment">but strings with quotes are still double quoted </span><span class="comment-delimiter">*)</span>
+
+  <span class="governing">let</span> <span class="function-name">grammar_to_string</span><span class="variable-name"> g</span> <span class="operator">=</span> of_grammar g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum
+<span class="governing">end</span>
+<span class="governing">let</span> <span class="variable-name">grammar_to_string</span> <span class="operator">=</span> <span class="module">Grammar_human.</span>grammar_to_string
+
+
+
+<span class="governing">module</span> <span class="module">Grammar_of_grammars</span> <span class="operator">=</span> <span class="governing">struct</span> 
+  <span class="governing">open </span><span class="module">Grammar_type</span>
+  <span class="governing">let</span> <span class="variable-name">nt</span> <span class="operator">=</span> re <span class="module">Re.</span><span class="operator">(</span>rep1 <span class="operator">(</span>rg <span class="string">'</span><span class="string">A</span><span class="string">'</span> <span class="string">'</span><span class="string">Z</span><span class="string">'</span><span class="operator">))</span>
+
+  <span class="governing">let</span> <span class="variable-name">tm_lit</span> <span class="operator">=</span> 
+    <span class="governing">let</span> <span class="variable-name">sq</span> <span class="operator">=</span> <span class="string">&quot;'&quot;</span> <span class="governing">in</span>
+    <span class="governing">let</span> <span class="variable-name">dq</span> <span class="operator">=</span> <span class="string">&quot;\&quot;&quot;</span> <span class="governing">in</span>
+    <span class="operator">((</span>a sq <span class="operator">--</span> upto_a sq <span class="operator">--</span> a sq<span class="operator">)</span> <span class="operator">||</span>
+     <span class="operator">(</span>a dq <span class="operator">--</span> upto_a dq <span class="operator">--</span> a dq<span class="operator">))</span>
+    <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> return <span class="operator">(</span>_3 x<span class="operator">)</span>
+
+  <span class="governing">let</span> <span class="variable-name">tm_re</span> <span class="operator">=</span> re <span class="module">Re.</span><span class="operator">(</span>seq <span class="operator">[</span>char <span class="string">'</span><span class="string">?</span><span class="string">'</span><span class="operator">;</span>rep1 <span class="operator">(</span>alt <span class="operator">[</span>alnum<span class="operator">;</span>char <span class="string">'</span><span class="string">_</span><span class="string">'</span><span class="operator">])]</span><span class="operator">)</span>
+
+  <span class="governing">let</span> <span class="variable-name">tm</span> <span class="operator">=</span> 
+    <span class="operator">(</span>tm_lit <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> <span class="constructor">Tm_lit</span><span class="operator">(</span>x<span class="operator">)</span> <span class="operator">|&gt;</span> return<span class="operator">)</span> <span class="operator">||</span>
+    <span class="operator">(</span>tm_re <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">y</span> <span class="operator">-&gt;</span> <span class="constructor">Tm_qu</span><span class="operator">(</span>y<span class="operator">)</span> <span class="operator">|&gt;</span> return<span class="operator">)</span>
+
+  <span class="governing">let</span> <span class="variable-name">sym</span> <span class="operator">=</span> 
+    <span class="operator">(</span>nt <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Nt</span> x<span class="operator">))</span> <span class="operator">||</span> 
+    <span class="operator">(</span>tm <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Tm</span> x<span class="operator">))</span>
+
+  <span class="governing">let</span> <span class="variable-name">syms</span> <span class="operator">=</span> plus <span class="label">~sep</span><span class="operator">:</span>ws sym
+
+  <span class="governing">let</span> <span class="variable-name">bar</span> <span class="operator">=</span> 
+    re <span class="operator">(</span><span class="module">Re.</span>char <span class="string">'</span><span class="string">|</span><span class="string">'</span><span class="operator">)</span> <span class="operator">|&gt;</span> <span class="keyword">fun</span> <span class="variable-name">bar</span> <span class="operator">-&gt;</span>
+    ws <span class="operator">--</span> bar <span class="operator">--</span> ws 
+
+  <span class="governing">let</span> <span class="variable-name">rhs</span> <span class="operator">=</span> plus <span class="label">~sep</span><span class="operator">:</span>bar syms
+
+  <span class="governing">let</span> <span class="variable-name">rule</span> <span class="operator">=</span> 
+    <span class="governing">let</span> <span class="variable-name">arrow</span> <span class="operator">=</span> ws <span class="operator">--</span> a <span class="string">&quot;-&gt;&quot;</span> <span class="operator">--</span> ws <span class="governing">in</span>
+    nt <span class="operator">--</span> arrow <span class="operator">--</span> rhs <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="operator">((</span><span class="variable-name">nt</span><span class="operator">,</span><span class="variable-name">_</span><span class="operator">),</span><span class="variable-name">rhs</span><span class="operator">)</span> <span class="operator">-&gt;</span> 
+    return <span class="operator">(</span>nt<span class="operator">,</span>rhs<span class="operator">)</span>
+
+  <span class="governing">let</span> <span class="variable-name">rules</span> <span class="operator">=</span> 
+    <span class="governing">let</span> <span class="variable-name">sep</span> <span class="operator">=</span> ws <span class="operator">--</span> a<span class="string">&quot;;&quot;</span> <span class="operator">--</span> ws <span class="governing">in</span>
+    star <span class="operator">~</span>sep rule 
+
+  <span class="governing">let</span> <span class="variable-name">grammar</span> <span class="operator">=</span> 
+    ws <span class="operator">--</span> rules <span class="operator">--</span> ws <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="operator">((</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">rs</span><span class="operator">),</span><span class="variable-name">_</span><span class="operator">)</span> <span class="operator">-&gt;</span> return rs
+
+  <span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">:</span> <span class="operator">(</span><span class="type">nt </span><span class="operator">*</span><span class="type"> sym list list</span><span class="operator">)</span><span class="type"> list m </span><span class="operator">=</span> grammar
+<span class="governing">end</span>
+
+<span class="governing">let</span> <span class="variable-name">grammar</span> <span class="operator">=</span> <span class="module">Grammar_of_grammars.</span>grammar
+
+
+<span class="comment-delimiter">(* </span><span class="comment">example ---------------------------------------------------------- </span><span class="comment-delimiter">*)</span>
+
+<span class="governing">let</span> <span class="variable-name">example</span> <span class="operator">=</span> <span class="string">{</span><span class="string">|
+
+(* the expressions we want to parse at top-level *)
+S -&gt; ?w DEFN ?w ?eof
+| ?w TYPEDEFINITIONS ?w ?eof
+| ?w TYPEXPR ?w ?eof
+
+|</span><span class="string">}</span> 
+
+<span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> 
+  to_fun grammar example <span class="operator">|&gt;</span> <span class="keyword">function</span>
+  <span class="operator">|</span> <span class="constructor">None</span> <span class="operator">-&gt;</span> <span class="builtin">failwith</span> <span class="constant">__LOC__</span>
+  <span class="operator">|</span> <span class="constructor">Some</span><span class="operator">(</span>g<span class="operator">,</span>_<span class="operator">)</span> <span class="operator">-&gt;</span> 
+    <span class="module">Printf.</span>printf <span class="string">&quot;Grammar example parsed successfully (%s)\n%s\n\n%!&quot;</span> <span class="constant">__FILE__</span> <span class="operator">(</span>grammar_to_string g<span class="operator">)</span>
+
+
+<span class="comment-delimiter">(* </span><span class="comment">ocaml grammar ---------------------------------------------------- </span><span class="comment-delimiter">*)</span>
+
+
+<span class="comment-delimiter">(* </span><span class="comment">FIXME really the variable names tend to be created from the names
+   of the nonterminals/terminals involved eg w1 for first ?w, mp for
+   MODULEPATH etc; this suggests to optionally decorate each nt/tm
+   with a base var name </span><span class="comment-delimiter">*)</span>
+
+<span class="governing">let</span> <span class="variable-name">g</span> <span class="operator">=</span> <span class="string">{</span><span class="string">|
+
+S -&gt; ?w SS ?w ?eof;
+
+(* the expressions we want to parse at top-level *)
+SS -&gt; DEFN
+| TYPEDEFINITIONS
+| TYPEXPR
+| &quot;e:&quot; EXPR
+| &quot;val&quot; ?w EXPR ?w &quot;:&quot; ?w TYPEXPR
+;
+
+DEFN -&gt; 
+    &quot;let&quot; ?w LETBINDING 
+  | &quot;let&quot; ?w &quot;rec&quot; ?w LETBINDING 
+;
+
+TYPEDEFINITIONS -&gt; TYPEDEFINITION 
+  | TYPEDEFINITION ?w TYPEDEFINITIONS   
+;
+
+
+(* var names: DEFN d; TYPEDEFINITIONS tds; *)
+
+
+(* 6.3 Names -------------------------------------------------------- *)
+
+VALUENAME -&gt; ?ident;
+
+INFIXOP -&gt; &quot;=&quot;
+  | &quot;++&quot;
+  | &quot;::&quot;
+  | &quot;&lt;&quot;
+  | &quot;&lt;=&quot;
+
+  | &quot;+&quot;
+  | &quot;@&quot;
+  | &quot;&amp;&amp;&quot;
+  | &quot;||&quot;
+  | &quot;***&gt;&quot;
+  | &quot;||||&quot;
+  | &quot;&gt;&gt;&gt;&gt;&quot;
+  | &quot;&gt;&gt;=&quot;
+  | &quot;|||&quot;
+;
+
+FIELDNAME -&gt; ?ident ;
+
+VALUEPATH -&gt; VALUENAME
+  | MODULEPATH &quot;.&quot; VALUENAME    
+;
+
+(* this was ?ident but we don't want List.map interpreted as
+CONSTR.FIELDNAME *)
+
+CONSTR -&gt;
+    ?constr
+;
+
+MODULEPATH -&gt; ?_Ident
+  | MODULEPATH &quot;.&quot; ?_Ident
+;
+
+
+(* var names: VALUENAME vn; FIELDNAME fn; VALUEPATH vp; MODULEPATH
+mp *)
+
+(* 6.4 Type expressions --------------------------------------------- *)
+
+(* following for type defns FIXME needs tidying
+up *)
+
+TYPEXPR -&gt; &quot;'&quot; ?ident
+  | &quot;(&quot; ?w TYPEXPR ?w &quot;)&quot;
+  | TYPEXPR ?w &quot;-&gt;&quot; ?w TYPEXPR
+  | TYPEXPR ?w &quot;*&quot; ?w TYPEXPR
+  | TYPECONSTR
+  | TYPECONSTR ?w TYPEXPRA
+;
+
+TYPEXPRA -&gt; TYPEXPR
+  | TYPEXPR ?w TYPEXPRA
+;
+
+OCAMLTYPEXPR -&gt; &quot;'&quot; ?ident
+  | &quot;(&quot; ?w TYPEXPR ?w &quot;)&quot;
+  | TYPEXPR ?w &quot;-&gt;&quot; ?w TYPEXPR
+  | TYPEXPR ?w &quot;*&quot; ?w TYPEXPR
+  | TYPECONSTR
+  | TYPEXPR ?w TYPECONSTR
+  | &quot;(&quot; ?w TYPEXPRA ?w &quot;)&quot; ?w TYPECONSTR
+;
+
+OCAMLTYPEXPRA -&gt; TYPEXPR
+  | TYPEXPR ?w &quot;,&quot; ?w TYPEXPRA
+;
+
+(*
+  | &quot;(&quot; ?w TYPE ?w &quot;)&quot;
+  | TYPE ?w ?ident
+  | MODULEPATH &quot;.&quot; TYPEXPR
+  | TYPEXPR ?w TYPECONSTR
+*)
+
+TYPECONSTR -&gt; TYPECONSTRNAME
+  | MODULEPATH &quot;.&quot; TYPECONSTRNAME
+;
+
+POLYTYPEXPR -&gt; TYPEXPR
+;
+
+(* var names FIXME *)
+
+
+(* 6.5 Constants ---------------------------------------------------- *)
+
+CONSTANT -&gt; CONSTR
+  | &quot;[&quot; ?w &quot;]&quot;
+  | ?num
+  | &quot;-&quot; ?num
+  | '&quot;' ?notdquote '&quot;'
+  | &quot;'&quot; ?notsquote &quot;'&quot;
+  | &quot;()&quot;
+;
+
+
+
+(* 6.6 Patterns ----------------------------------------------------- *)
+
+PATTERN -&gt; EXPR
+;
+
+
+(* 6.7 Expressions -------------------------------------------------- *)
+
+
+(* grammar is too ambiguous so we identify atomic
+expressions which can be arguments to functions *)
+
+EXPR -&gt; ATEXPR
+  | EXPR &quot;:&quot; TYPEXPR
+  | EXPR ?w &quot;,&quot; ?w EXPRA
+  | CONSTR ?w EXPR
+  | EXPR ?w &quot;::&quot; ?w EXPR
+  | FNARGS
+  | EXPR ?w INFIXOP ?w EXPR
+  | &quot;if&quot; ?w EXPR ?w &quot;then&quot; ?w EXPR ?w &quot;else&quot; ?w EXPR
+
+  | &quot;match&quot; ?w EXPR ?w &quot;with&quot; ?w PATTERNMATCHING ?w &quot;end&quot;
+
+  | &quot;let&quot; ?w LETBINDING ?w &quot;in&quot; ?w EXPR
+
+  | &quot;let&quot; ?w &quot;rec&quot; ?w LETBINDING ?w &quot;in&quot; ?w EXPR
+
+  | &quot;fun&quot; ?w MULTIPLEMATCHING
+;
+
+(* FIXME List.map parses as ATEXPR &quot;.&quot; FIELDNAME, where ATEXPR is CONSTANT CONSTR *)
+
+ATEXPR -&gt;
+    VALUEPATH
+  | CONSTANT
+  | &quot;(&quot; ?w EXPR ?w &quot;)&quot;
+  | &quot;[&quot; ?w EXPRLIST ?w &quot;]&quot;
+  | RECORD
+  | ATEXPR &quot;.&quot; FIELDNAME
+  | ATEXPR &quot;.&quot; &quot;[&quot; EXPR &quot;]&quot;
+  | &quot;_&quot;
+  | &quot;&lt;fun&gt;&quot;
+  | &quot;(&quot; ?w INFIXOP ?w &quot;)&quot;
+;
+
+EXPRA -&gt; EXPR
+  | EXPR ?w &quot;,&quot; ?w EXPRA
+;
+
+
+EXPRLIST -&gt;
+    EXPR
+  | EXPR ?w &quot;;&quot; ?w EXPRLIST
+;
+
+
+PATTERNMATCHING -&gt; CASESB
+  | &quot;|&quot; ?w CASESB
+;
+
+
+CASESB -&gt;
+  CASE
+  | CASE ?w &quot;|&quot; ?w CASESB
+(* above clause erroneously allows cases to start with a bar *)
+;
+
+CASE -&gt; PATTERN ?w &quot;-&gt;&quot; ?w EXPR
+;
+
+
+MULTIPLEMATCHING -&gt; PATTERNMATCHING ;
+
+LETBINDING -&gt; PATTERN ?w &quot;=&quot; ?w EXPR ;
+
+
+
+FNARGS -&gt; ATEXPR ?w ATEXPR
+  | ATEXPR ?w FNARGS
+;
+
+RECORD -&gt;
+    &quot;&lt;|&quot; ?w FIELDS ?w &quot;|&gt;&quot;
+  | &quot;&lt;|&quot; ?w ATEXPR ?w &quot;with&quot; ?w FIELDS ?w &quot;|&gt;&quot;
+;
+
+FIELDS -&gt;
+    FIELD
+  | FIELD ?w &quot;;&quot; ?w FIELDS
+;
+
+FIELD -&gt;
+    ?ident ?w &quot;=&quot; ?w EXPR
+;
+
+
+(* 6.8 Type and exception definitions ------------------------------- *)
+
+TYPEDEFINITION -&gt; &quot;type&quot; ?w TYPEDEF
+;
+
+TYPEDEF -&gt; TYPECONSTRNAME ?w TYPEINFORMATION
+
+  | TYPECONSTRNAME ?w TYPEPARAMS ?w TYPEINFORMATION
+
+(* FIXME what about params? may cause problems because hol lists
+params in order they occur in defn :( *)
+;
+
+TYPEPARAMS -&gt; TYPEPARAM
+  | TYPEPARAM ?w TYPEPARAMS
+;
+
+OCAMLTYPEPARAMS -&gt; TYPEPARAM
+  | &quot;(&quot; ?w TYPEPARAMSA ?w &quot;)&quot;
+;
+
+TYPEPARAMSA -&gt; TYPEPARAM
+  | TYPEPARAM ?w &quot;,&quot; ?w TYPEPARAMSA
+;
+
+TYPEPARAM -&gt; &quot;'&quot; ?ident
+;
+
+TYPECONSTRNAME -&gt; ?ident
+;
+
+TYPEINFORMATION -&gt; TYPEEQUATION
+  | TYPEREPRESENTATION
+;
+
+TYPEEQUATION -&gt; &quot;=&quot; ?w TYPEXPR ;
+
+TYPEREPRESENTATION -&gt; &quot;=&quot; ?w CONSTRDECLS
+  | &quot;=&quot; ?w &quot;&lt;|&quot; ?w FIELDDECLS ?w &quot;|&gt;&quot;
+;
+
+
+CONSTRDECLS -&gt; CONSTRDECL
+  | CONSTRDECL ?w &quot;|&quot; ?w CONSTRDECLS
+;
+
+CONSTRDECL -&gt; CONSTRNAME
+  | CONSTRNAME ?w &quot;of&quot; ?w TYPEXPR
+;
+
+CONSTRNAME -&gt; ?_Ident ;
+
+(* following can end in optional ; *)
+FIELDDECLS -&gt; FIELDDECLSA
+  | FIELDDECLSA ?w &quot;;&quot;
+;
+
+FIELDDECLSA -&gt; FIELDDECL
+  | FIELDDECL ?w &quot;;&quot; ?w FIELDDECLSA
+;
+
+(* FIXME the pattern is we map nonterms to strings; this causes lots
+of messing about with c and ^ *)
+
+FIELDDECL -&gt; FIELDNAME ?w &quot;:&quot; ?w POLYTYPEXPR 
+
+|</span><span class="string">}</span>
+
+<span class="governing">let</span> <span class="function-name">test</span><span class="variable-name"> </span><span class="operator">()</span> <span class="operator">=</span> 
+  <span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> to_fun grammar g <span class="operator">|&gt;</span> <span class="keyword">function</span> 
+    <span class="operator">|</span> <span class="constructor">Some</span> <span class="operator">(</span>g<span class="operator">,</span><span class="string">&quot;&quot;</span><span class="operator">)</span> <span class="operator">-&gt;</span> 
+      <span class="module">Printf.</span>printf <span class="string">&quot;OCaml grammar parsed\n%s\\n\n%!&quot;</span> <span class="operator">(</span>g <span class="operator">|&gt;</span> grammar_to_string<span class="operator">)</span>
+    <span class="operator">|</span> <span class="constructor">None</span> <span class="operator">-&gt;</span> <span class="builtin">failwith</span> <span class="constant">__LOC__</span> 
+  <span class="governing">in</span>
+  <span class="module">Printf.</span>printf <span class="string">&quot;Parsing grammar (x100)...%!&quot;</span><span class="operator">;</span>
+  <span class="keyword">for</span> _i <span class="operator">=</span> 1 <span class="keyword">to</span> 100 <span class="keyword">do</span> <span class="builtin">ignore</span><span class="operator">(</span>to_fun grammar g<span class="operator">)</span> <span class="keyword">done</span><span class="operator">;</span>
+  <span class="module">Printf.</span>printf <span class="string">&quot;finished!\n\n%!&quot;</span>
+
+<span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> test <span class="operator">()</span>
+
+<span class="comment-delimiter">(*</span><span class="comment">
+
+Parsing grammar (x100)...finished!
+
+</span><span class="comment">real	0m0.199s
+user	0m0.166s
+sys	0m0.027s
+</span><span class="comment">
+</span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">arithmetic ------------------------------------------------------- </span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">NOTE the notion of precedence is here: a times is &quot;upto&quot; a non-times + </span><span class="comment-delimiter">*)</span>
+
+<span class="governing">module</span> <span class="module">Arith_type</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">open </span><span class="module">Core_kernel</span>
+  <span class="governing">type</span> <span class="type">arith</span> <span class="operator">=</span> 
+      <span class="constructor">Times</span> <span class="keyword">of</span> arith list
+    <span class="operator">|</span> <span class="constructor">Plus</span> <span class="keyword">of</span> arith list
+    <span class="operator">|</span> <span class="constructor">Atomic</span> <span class="keyword">of</span> atomic  <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">and</span> <span class="variable-name">atomic</span> <span class="operator">=</span> <span class="constructor">Int</span> <span class="keyword">of</span> int <span class="operator">|</span> <span class="constructor">Bracket</span> <span class="keyword">of</span> arith <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">let</span> <span class="function-name">arith_to_string</span><span class="variable-name"> x</span> <span class="operator">=</span> 
+    x <span class="operator">|&gt;</span> sexp_of_arith <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+<span class="governing">end</span>
+
+<span class="governing">let</span> <span class="variable-name">arith_to_string</span> <span class="operator">=</span> <span class="module">Arith_type.</span>arith_to_string
+
+<span class="governing">include</span> <span class="governing">struct</span>
+  <span class="governing">open </span><span class="module">Arith_type</span>
+  <span class="governing">let</span> <span class="variable-name">delay</span> <span class="operator">=</span> a <span class="string">&quot;&quot;</span>
+
+  <span class="governing">let</span> <span class="variable-name">num</span> <span class="operator">=</span> re <span class="operator">(</span><span class="module">Re.</span><span class="operator">(</span>rep1 digit<span class="operator">))</span> <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Int</span> <span class="operator">(</span>int_of_string x<span class="operator">))</span>
+
+  <span class="doc">(** NOTE we break the rec by passing atomic as an extra arg; not
+     sure this is cleaner than the previous version... *)</span>
+  <span class="governing">let</span> <span class="function-name">arith</span><span class="variable-name"> </span><span class="operator">~</span><span class="variable-name">atomic</span> <span class="operator">=</span>
+    <span class="governing">let</span> <span class="variable-name">times</span> <span class="operator">=</span> plus <span class="label">~sep</span><span class="operator">:(</span>a<span class="string">&quot;*&quot;</span><span class="operator">)</span> atomic <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">es</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Times</span> es<span class="operator">)</span> <span class="governing">in</span>
+    <span class="governing">let</span> <span class="variable-name">plus_</span> <span class="operator">=</span> plus <span class="label">~sep</span><span class="operator">:(</span>a<span class="string">&quot;+&quot;</span><span class="operator">)</span> times <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">es</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Plus</span> es<span class="operator">)</span> <span class="governing">in</span>
+    <span class="governing">let</span> <span class="variable-name">atomic</span> <span class="operator">=</span> 
+      <span class="operator">(</span>num <span class="operator">||</span> 
+       <span class="operator">(</span>a<span class="string">&quot;(&quot;</span> <span class="operator">--</span> plus_ <span class="operator">--</span> a<span class="string">&quot;)&quot;</span> <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="operator">((</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">x</span><span class="operator">),</span><span class="variable-name">_</span><span class="operator">)</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Bracket</span> x<span class="operator">)))</span>
+      <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">x</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Atomic</span> x<span class="operator">)</span> 
+    <span class="governing">in</span>
+    <span class="operator">(</span>times<span class="operator">,</span>plus_<span class="operator">,</span>atomic<span class="operator">)</span>
+
+  <span class="governing">let</span> <span class="variable-name">arith</span> <span class="operator">=</span> 
+    <span class="governing">let</span> <span class="governing">rec</span> <span class="function-name">atomic</span><span class="variable-name"> </span><span class="operator">()</span> <span class="operator">=</span>  
+      delay <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">_</span> <span class="operator">-&gt;</span> arith <span class="label">~atomic</span><span class="operator">:(</span>atomic <span class="operator">())</span> <span class="operator">|&gt;</span> <span class="keyword">fun</span> <span class="operator">(</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">a</span><span class="operator">)</span> <span class="operator">-&gt;</span> a
+    <span class="governing">in</span>
+    <span class="governing">let</span> <span class="variable-name">plus_</span> <span class="operator">=</span> arith <span class="label">~atomic</span><span class="operator">:(</span>atomic <span class="operator">())</span> <span class="operator">|&gt;</span> <span class="keyword">fun</span> <span class="operator">(</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">p</span><span class="operator">,</span><span class="variable-name">_</span><span class="operator">)</span> <span class="operator">-&gt;</span> p <span class="governing">in</span>
+    plus_
+  <span class="comment-delimiter">(* </span><span class="comment">The above is a bit too fancy FIXME </span><span class="comment-delimiter">*)</span>
+
+  <span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> arith
+
+<span class="governing">end</span>
+
+<span class="governing">let</span> <span class="function-name">test</span><span class="variable-name"> </span><span class="operator">()</span> <span class="operator">=</span> 
+  <span class="operator">(</span>arith <span class="operator">|&gt;</span> to_fun<span class="operator">)</span> <span class="operator">(</span><span class="string">&quot;1+2*3*4+5*6&quot;</span><span class="operator">)</span> <span class="operator">|&gt;</span> <span class="keyword">fun</span> <span class="operator">(</span><span class="constructor">Some</span><span class="operator">(</span><span class="variable-name">a</span><span class="operator">,</span><span class="string">&quot;&quot;</span><span class="operator">))</span> <span class="operator">-&gt;</span> 
+  <span class="module">Printf.</span>printf <span class="string">&quot;Arithmetic example: \n%s\n\n%!&quot;</span> <span class="operator">(</span>a <span class="operator">|&gt;</span> arith_to_string<span class="operator">)</span>
+
+<span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> test<span class="operator">()</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">old
+  let rec times () = plus ~sep:(a&quot;*&quot;) (atomic()) &gt;&gt;= fun es -&gt; return (Times es)
+
+  and plus_ () = plus ~sep:(a&quot;+&quot;) (times()) &gt;&gt;= fun es -&gt; return (Plus es)
+
+  (* NOTE the use of delay *)
+  and atomic () = delay &gt;&gt;= fun _ -&gt;</span><span class="comment"> </span><span class="comment">
+    (num || 
+     (a&quot;(&quot; -- plus_ () -- a&quot;)&quot; &gt;&gt;= fun ((_,x),_) -&gt; return (Bracket x)))
+    &gt;&gt;= fun x -&gt; return (Atomic x)
+
+  let arith = plus_ ()
+</span><span class="comment-delimiter">*)</span>
+
+
+<span class="comment-delimiter">(* </span><span class="comment">csv -------------------------------------------------------------- </span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">chars </span><span class="comment-delimiter">*)</span>
+<span class="governing">module</span> <span class="module">C</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">let</span> <span class="variable-name">dq</span> <span class="operator">=</span> <span class="string">'</span><span class="string">&quot;</span><span class="string">'</span>
+  <span class="governing">let</span> <span class="variable-name">comma</span> <span class="operator">=</span> <span class="string">'</span><span class="string">,</span><span class="string">'</span>
+  <span class="governing">let</span> <span class="variable-name">eol</span> <span class="operator">=</span> <span class="string">'</span><span class="string">\n</span><span class="string">'</span>
+<span class="governing">end</span>
+
+<span class="governing">module</span> <span class="module">R</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">open </span><span class="module">C</span>
+  <span class="governing">let</span> <span class="variable-name">dq</span> <span class="operator">=</span> <span class="module">Re.</span><span class="operator">(</span>char dq<span class="operator">)</span>
+  <span class="governing">let</span> <span class="variable-name">not_dq</span> <span class="operator">=</span> re <span class="module">Re.</span><span class="operator">(</span>rep <span class="operator">(</span>compl <span class="operator">[</span>dq<span class="operator">]))</span>
+  <span class="governing">let</span> <span class="variable-name">comma</span> <span class="operator">=</span> <span class="module">Re.</span><span class="operator">(</span>char comma<span class="operator">)</span>
+  <span class="governing">let</span> <span class="variable-name">eol</span> <span class="operator">=</span> <span class="module">Re.</span><span class="operator">(</span>char <span class="module">C.</span>eol<span class="operator">)</span>
+<span class="governing">end</span>
+<span class="governing">open </span><span class="module">R</span>
+
+<span class="governing">module</span> <span class="module">P</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">let</span> <span class="variable-name">dq</span> <span class="operator">=</span> re dq
+  <span class="governing">let</span> <span class="variable-name">comma</span> <span class="operator">=</span> re comma
+  <span class="governing">let</span> <span class="variable-name">eol</span> <span class="operator">=</span> re eol
+<span class="governing">end</span>
+<span class="governing">open </span><span class="module">P</span>
+
+<span class="governing">module</span> <span class="module">Csv_type</span> <span class="operator">=</span> <span class="governing">struct</span>
+  <span class="governing">open </span><span class="module">Core_kernel</span>      
+  <span class="governing">type</span> <span class="type">field</span> <span class="operator">=</span> <span class="constructor">Q</span> <span class="keyword">of</span> string <span class="operator">|</span> <span class="constructor">U</span> <span class="keyword">of</span> string <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">type</span> <span class="type">row</span> <span class="operator">=</span> field list <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">type</span> <span class="type">csv</span> <span class="operator">=</span> row list <span class="attribute">[@@deriving sexp]</span>
+  <span class="governing">let</span> <span class="function-name">csv_to_string</span><span class="variable-name"> x</span> <span class="operator">=</span>
+    x <span class="operator">|&gt;</span> sexp_of_csv <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+<span class="governing">end</span>
+
+<span class="governing">open </span><span class="module">Csv_type</span>
+
+<span class="doc">(** A CSV parser. NOTE dq is &quot;double quote&quot; *)</span>
+<span class="governing">let</span> <span class="governing">rec</span> <span class="function-name">inside</span><span class="variable-name"> sofar</span> <span class="operator">=</span>
+  not_dq <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">s</span> <span class="operator">-&gt;</span>
+  dq <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">_</span> <span class="operator">-&gt;</span>
+  opt dq <span class="operator">&gt;&gt;=</span> <span class="keyword">function</span>
+  <span class="operator">|</span> <span class="constructor">None</span> <span class="operator">-&gt;</span> return <span class="operator">(</span><span class="constructor">Q</span> <span class="operator">(</span>sofar<span class="operator">^</span>s<span class="operator">))</span>
+  <span class="operator">|</span> <span class="constructor">Some</span> _ <span class="operator">-&gt;</span> inside <span class="operator">(</span>sofar<span class="operator">^</span>s<span class="operator">^</span><span class="module">String.</span>make 1 <span class="module">C.</span>dq<span class="operator">)</span>
+
+<span class="governing">let</span> <span class="variable-name">quoted</span> <span class="operator">=</span> <span class="operator">(</span>dq <span class="operator">--</span> inside <span class="string">&quot;&quot;</span><span class="operator">)</span> <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="operator">(</span><span class="variable-name">_</span><span class="operator">,</span><span class="variable-name">x</span><span class="operator">)</span> <span class="operator">-&gt;</span> return x
+
+<span class="governing">let</span> <span class="variable-name">unquoted_terminator</span> <span class="operator">=</span> <span class="module">Re.</span><span class="operator">(</span>alt<span class="operator">[</span>char <span class="string">'</span><span class="string">&quot;</span><span class="string">'</span><span class="operator">;</span> char <span class="string">'</span><span class="string">,</span><span class="string">'</span><span class="operator">;</span> char <span class="string">'</span><span class="string">\n</span><span class="string">'</span><span class="operator">])</span>
+
+<span class="governing">let</span> <span class="variable-name">unquoted</span> <span class="operator">=</span> 
+  re <span class="module">Re.</span><span class="operator">(</span>rep <span class="operator">(</span>compl <span class="operator">[</span>unquoted_terminator<span class="operator">]))</span> <span class="operator">&gt;&gt;=</span> <span class="keyword">fun</span> <span class="variable-name">s</span> <span class="operator">-&gt;</span>
+  return <span class="operator">(</span><span class="constructor">U</span> s<span class="operator">)</span>
+
+<span class="governing">let</span> <span class="variable-name">field</span> <span class="operator">=</span> quoted <span class="operator">||</span> unquoted 
+
+<span class="governing">let</span> <span class="variable-name">row</span> <span class="operator">=</span> plus <span class="label">~sep</span><span class="operator">:</span>comma field 
+  
+<span class="governing">let</span> <span class="variable-name">rows</span> <span class="operator">=</span> star <span class="label">~sep</span><span class="operator">:</span>eol row
+
+
+
+<span class="comment-delimiter">(* </span><span class="comment">NOTE unquoted: the following will parse an empty line as an unquoted provided
+   followed by an unquoted terminator; an empty field as an unquoted
+
+   FIXME we may want unquoted to also parse the empty line upto the end of string
+   </span><span class="comment-delimiter">*)</span>
+
+<span class="comment-delimiter">(* </span><span class="comment">NOTE the last unquoted field can extend to the end of the string,
+   provided no terminators are found </span><span class="comment-delimiter">*)</span>
+
+<span class="governing">let</span> <span class="function-name">test_csv</span><span class="variable-name"> csv_as_string expected</span> <span class="operator">=</span> 
+  <span class="keyword">assert</span><span class="operator">(</span>to_fun rows csv_as_string <span class="operator">|&gt;</span> <span class="keyword">function</span>
+  <span class="operator">|</span> <span class="constructor">None</span> <span class="operator">-&gt;</span> <span class="constant">false</span>
+  <span class="operator">|</span> <span class="constructor">Some</span> <span class="operator">(</span>c<span class="operator">,</span>_<span class="operator">)</span> <span class="operator">-&gt;</span> c<span class="operator">=</span>expected<span class="operator">)</span>
+
+<span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> 
+  <span class="module">Printf.</span>printf <span class="string">&quot;Example csv parse: %s\n\n%!&quot;</span> 
+    <span class="operator">(</span>to_fun rows <span class="string">{</span><span class="string">|
+a,b,c|</span><span class="string">}</span> <span class="operator">|&gt;</span> <span class="keyword">fun</span> <span class="operator">(</span><span class="constructor">Some</span><span class="operator">(</span><span class="variable-name">csv</span><span class="operator">,</span><span class="variable-name">_</span><span class="operator">))</span> <span class="operator">-&gt;</span> csv_to_string csv<span class="operator">)</span>
+
+<span class="governing">let</span> <span class="variable-name">_</span> <span class="operator">=</span> 
+  print_string <span class="string">&quot;Testing csv parser...&quot;</span><span class="operator">;</span>
+  test_csv 
+    <span class="string">{</span><span class="string">|
+a,b,c|</span><span class="string">}</span> 
+    <span class="operator">[</span>
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;&quot;</span><span class="operator">];</span> 
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;a&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;b&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;c&quot;</span><span class="operator">];</span>
+    <span class="operator">];</span>
+
+  test_csv 
+    <span class="string">{</span><span class="string">|
+a,b,c
+d,&quot;e,f,g&quot;,h
+i,&quot;jk&quot;&quot;l&quot;,
+|</span><span class="string">}</span> 
+    <span class="operator">[</span>
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;&quot;</span><span class="operator">];</span> 
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;a&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;b&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;c&quot;</span><span class="operator">];</span>
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;d&quot;</span><span class="operator">;</span> <span class="constructor">Q</span> <span class="string">&quot;e,f,g&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;h&quot;</span><span class="operator">];</span>
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;i&quot;</span><span class="operator">;</span> <span class="constructor">Q</span> <span class="string">&quot;jk\&quot;l&quot;</span><span class="operator">;</span> <span class="constructor">U</span> <span class="string">&quot;&quot;</span><span class="operator">];</span>
+      <span class="operator">[</span><span class="constructor">U</span> <span class="string">&quot;&quot;</span><span class="operator">]</span>
+    <span class="operator">];</span>
+
+  print_endline <span class="string">&quot;finished!&quot;</span>
+</pre>
+
+ </body>
+</html>
