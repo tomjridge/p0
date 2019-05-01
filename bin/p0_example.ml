@@ -89,23 +89,16 @@ module Grammar_of_grammars = struct
 
   let syms = plus ~sep:ws sym
 
-  let bar = 
-    re (Re.char '|') |> fun bar ->
-    ws -- bar -- ws 
+  let bar = ws -- a"|" -- ws 
 
   let rhs = plus ~sep:bar syms
 
-  let rule = 
-    let arrow = ws -- a "->" -- ws in
-    nt -- arrow -- rhs >>= fun ((nt,_),rhs) -> 
-    return (nt,rhs)
+  let rule = nt -- (ws -- a "->" -- ws) -- rhs 
+    >>= fun ((nt,_),rhs) -> return (nt,rhs)
 
-  let rules = 
-    let sep = ws -- a";" -- ws in
-    star ~sep rule 
+  let rules = star ~sep:(ws -- a";" -- ws) rule 
 
-  let grammar = 
-    ws -- rules -- ws >>= fun ((_,rs),_) -> return rs
+  let grammar = ws -- rules -- ws >>= fun ((_,rs),_) -> return rs
 
   let _ : (nt * sym list list) list m = grammar
 end
@@ -432,8 +425,9 @@ FIELDDECL -> FIELDNAME ?w ":" ?w POLYTYPEXPR
 
 let test () = 
   let _ = to_fun grammar g |> function 
-    | Some (g,"") -> 
-      Printf.printf "OCaml grammar parsed\n%s\\n\n%!" (g |> grammar_to_string)
+    | Some (g,s) -> 
+      assert (if s="" then true else (print_endline s; false) );
+      g |> grammar_to_string |> print_endline
     | None -> failwith __LOC__ 
   in
   Printf.printf "Parsing grammar (x100)...%!";
