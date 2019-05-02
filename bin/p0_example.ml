@@ -1,7 +1,5 @@
 open P0_lib
-
-(** Helper to avoid dependence on associativity of -- *)
-let _3 ((x1,x2),x3) = (x1,x2,x3)
+open Bin_prelude
 
 (* grammar of grammars ---------------------------------------------- *)
 
@@ -19,53 +17,6 @@ let rec ws s =
     s
 let ws = of_fun ws
 
-
-(** For pretty-printing *)
-module Internal = struct
-  module Grammar_type = struct
-    open Core_kernel
-    type nt = string [@@deriving sexp]
-    type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
-    type sym = Nt of nt | Tm of tm [@@deriving sexp]
-    type rhs = sym list [@@deriving sexp]
-    type rule = nt * rhs list [@@deriving sexp]
-    type grammar = rule list [@@deriving sexp]
-
-    let grammar_to_string g = 
-      g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
-  end
-  let grammar_to_string = Grammar_type.grammar_to_string
-
-  (** Make pretty-printing slightly more human by omitting some brackets *)
-  module Grammar_human = struct
-    include struct 
-      open Core_kernel
-      type nt = string [@@deriving sexp]
-      type sym = string [@@deriving sexp]
-      type rhs = sym list [@@deriving sexp]
-      type rule = nt * rhs list [@@deriving sexp]
-      type grammar = rule list [@@deriving sexp]
-    end
-
-    let of_grammar (g:Grammar_type.grammar) : grammar = 
-      let open Grammar_type in 
-      let rec conv_g = function
-        | rs -> List.map conv_rule rs
-      and conv_rule (nt,rhs) = (nt,List.map conv_rhs rhs)
-      and conv_rhs syms = List.map conv_sym syms 
-      and conv_sym = function
-        | Nt nt -> nt
-        | Tm (Tm_lit (s1,s2,s3)) -> s2 (* s1^s2^s3 *)
-        | Tm (Tm_qu s) -> s
-      in
-      conv_g g
-
-    (* but strings with quotes are still double quoted *)
-
-    let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum
-  end
-  let grammar_to_string = Grammar_human.grammar_to_string
-end
 open Internal
 
 (** Parse a textual grammar defn (the example below is the defn of the
@@ -444,30 +395,13 @@ let test () =
 let _ = test ()
 
 (*
-
-Parsing grammar (x100)...finished!
-
-real	0m0.199s
-user	0m0.166s
-sys	0m0.027s
-
+Parsing grammar (x100)...finished in 0.152814 seconds!
 *)
 
 (* arithmetic ------------------------------------------------------- *)
 
 (* NOTE the notion of precedence is here: a times is "upto" a non-times + *)
 
-(** For pretty-printing *)
-module Arith_type = struct
-  open Core_kernel
-  type arith = 
-      Times of arith list
-    | Plus of arith list
-    | Atomic of atomic  [@@deriving sexp]
-  and atomic = Int of int | Bracket of arith [@@deriving sexp]
-  let arith_to_string x = 
-    x |> sexp_of_arith |> Core_kernel.Sexp.to_string_hum 
-end
 
 let arith_to_string = Arith_type.arith_to_string
 
