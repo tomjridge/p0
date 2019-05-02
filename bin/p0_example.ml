@@ -431,8 +431,11 @@ let test () =
     | None -> failwith __LOC__ 
   in
   Printf.printf "Parsing grammar (x100)...%!";
-  for _i = 1 to 100 do ignore(to_fun grammar g) done;
-  Printf.printf "finished!\n\n%!"
+  let f () = 
+    for _i = 1 to 100 do ignore(to_fun grammar g) done
+  in
+  Bin_util.time f |> fun dur -> 
+  Printf.printf "finished in %G seconds!\n\n%!" dur
 
 let _ = test ()
 
@@ -470,20 +473,20 @@ include struct
 
   let num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
 
-  (* atomic is a placeholder that will be filled in later *)
-  let atomic = 
+  (* a placeholder that will be filled in later *)
+  let atomic_ref = 
     let dummy = of_fun (fun i -> failwith __LOC__) in
     ref dummy
 
   (* the delay is to avoid the atomic deref before it is filled in *)
   let product = delay >>= fun _ -> 
-    plus ~sep:(a"*") !atomic >>= fun es -> return (Times es)
+    plus ~sep:(a"*") !atomic_ref >>= fun es -> return (Times es)
   let sum = plus ~sep:(a"+") product >>= fun es -> return (Plus es)
   let bracket = a"(" -- sum -- a")"  >>= fun ((_,x),_) -> return (Bracket x)
-  let atomic' = (num || bracket)     >>= fun x -> return (Atomic x) 
+  let atomic = (num || bracket)     >>= fun x -> return (Atomic x) 
 
   let arith = 
-    atomic := atomic';
+    atomic_ref := atomic;
     sum
 
   let _ = arith
