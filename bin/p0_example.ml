@@ -7,14 +7,18 @@ let _3 ((x1,x2),x3) = (x1,x2,x3)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 
+let _whitespace = re Re.(rep (set " \n")) 
+
+(* the following idiom allows to define a recursive parser that
+   satisfies OCaml; eta expansion using underlying type of monad as a
+   function *)
 (* includes comments *)
-let ws = 
-  let whitespace = re Re.(rep (set " \n")) in
-  let rec f () = 
-    whitespace >>= fun _ ->
-    opt (comm >>= fun _ -> f ()) >>= fun _ -> return ()
-  in
-  f ()
+let rec ws s = 
+  to_fun
+    (_whitespace -- opt (comm -- of_fun ws) >>= fun _ -> return ())
+    s
+let ws = of_fun ws
+
 
 (** For pretty-printing *)
 module Internal = struct
@@ -469,25 +473,20 @@ let arith_to_string = Arith_type.arith_to_string
 
 include struct
   open Arith_type
-  let delay = a ""
 
   let num = re (Re.(rep1 digit)) >>= fun x -> return (Int (int_of_string x))
 
-  (* a placeholder that will be filled in later *)
-  let atomic_ref = 
-    let dummy = of_fun (fun i -> failwith __LOC__) in
-    ref dummy
+  (* eta expand sum so that we can call recursively *)
 
-  (* the delay is to avoid the atomic deref before it is filled in *)
-  let product = delay >>= fun _ -> 
-    plus ~sep:(a"*") !atomic_ref >>= fun es -> return (Times es)
-  let sum = plus ~sep:(a"+") product >>= fun es -> return (Plus es)
-  let bracket = a"(" -- sum -- a")"  >>= fun ((_,x),_) -> return (Bracket x)
-  let atomic = (num || bracket)     >>= fun x -> return (Atomic x) 
+  let rec sum s = 
+    let bracket = a"(" -- of_fun sum -- a")"  >>= fun ((_,x),_) -> return (Bracket x) in
+    let atomic = (num || bracket) >>= fun x -> return (Atomic x) in
+    let product = plus ~sep:(a"*") atomic >>= fun es -> return (Times es) in
+    to_fun 
+      (plus ~sep:(a"+") product >>= fun es -> return (Plus es))
+      s
 
-  let arith = 
-    atomic_ref := atomic;
-    sum
+  let arith = of_fun sum
 
   let _ = arith
 
