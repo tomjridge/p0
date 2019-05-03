@@ -270,3 +270,26 @@ let upto_a lit =
 (** debug by showing the input (and an optional msg) *)  
 let debug ?(msg="") () = of_fun (fun i ->
   Printf.printf "%s %s\n%!" msg i; Some((),i))
+
+
+let rec alternatives = function
+  | [] -> failwith "no alternatives"
+  | [x] -> x
+  | x::xs -> x || alternatives xs
+
+let rec sequence = function
+  | [] -> a"" >>= fun _ -> return []
+  | [x] -> x >>= fun r -> return [r]
+  | x::xs -> x -- (sequence xs) >>= fun (a,b) -> return (a::b)
+
+(** support OCaml's built-in Str regexps *)
+module Str_ = struct
+  open Str
+  let re (re:string) = 
+    let re = Str.regexp re in
+    of_fun (fun s -> 
+      string_match re s 0 |> function
+      | false -> None
+      | true -> matched_string s |> fun mat -> 
+                Some(mat,drop (String.length mat) s))
+end
