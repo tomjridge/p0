@@ -1,13 +1,61 @@
 
 (** Monadic parser combinators *)
 
+
+(** State-passing monad, with option *)
+module Monad : sig 
+  type ('a,'t) m
+  val return: 'a -> ('a,'t)m
+  val bind: ('a,'t)m -> ('a -> ('b,'t) m) -> ('b,'t)m
+
+  val ( >>= ) : ('a,'t)m -> ('a -> ('b,'t) m) -> ('b,'t)m
+      
+  val fail : unit -> ('a,'t) m
+
+  (** Reveal the implementation type *)
+  module Internal : sig
+    val of_fun : ('t -> ('a * 't)option) -> ('a,'t)m
+    val to_fun : ('a,'t)m -> ('t -> ('a * 't)option)
+  end
+end = struct
+  type ('a,'t)m = ('t -> ('a * 't)option)
+  let return a = (fun t -> Some(a,t))
+  let bind a ab = 
+    fun t -> a t |> function
+      | None -> None
+      | Some (a,t) ->
+        ab a t
+
+  let ( >>= ) = bind
+
+  let fail () = fun _t -> None
+
+  module Internal = struct
+    let of_fun f = f
+    let to_fun m = m
+  end
+
+end
+open Monad
+
+
+
 module Internal = struct
 
+  (** Inputs eg strings *)
   module type I = sig
     type t 
     val drop : int -> t -> t
     val split_at: int -> t -> t*t
     val len : t -> int
+  end
+
+  (** integrate input with monad *)
+  module type IM = sig
+    module I : I
+    type t
+    val get_input: unit -> (I.t,t) m
+    val set_input: I.t -> (unit,t) m
   end
 
   (** NOTE we assume that re matches from the beginning of the string
@@ -19,15 +67,6 @@ module Internal = struct
     type compiled_re (* Re.re *) 
 
     val literal: I.t -> re
-    (* val longest: re -> re *)
-
-(*
-    (** Beginning of string *)
-    val bos: re
-
-    (** Re sequence *)
-    val seq : re list -> re
-*)
 
     (** NOTE only way to get compiled_re; named awkwardly to emphasize
        the implicit bos and longest *)
@@ -36,55 +75,46 @@ module Internal = struct
     type group
     val group_stop : group -> int  (* use 0 group match *)
     val exec_opt : compiled_re -> I.t -> group option  
-    (* we have to decide how to process the input given information about the match *)
+    (* we have to decide how to process the input given information
+       about the match *)
   end
 
-  module Make(I:I)(Re:RE with module I := I) = struct
+  module Make(I:I)(IM:IM with module I:=I)(Re:RE with module I := I) = struct
 
     open I
+    open IM
     open Re
 
-    module Monad : sig
-      type 'a m
-      val return : 'a -> 'a m
-      val ( >>=) : 'a m -> ('a -> 'b m) -> 'b m
+    type 'a m = ('a,t) Monad.m
+        
+    (** lift a function on inputs to the monad *)
+    let of_fun: (I.t -> ('a*I.t)option) -> 'a m = fun f -> 
+      get_input () >>= fun i -> 
+      f i |> function
+      | None -> fail ()
+      | Some(a,i) -> 
+      set_input i >>= fun () ->
+      return a
 
-      val of_fun: (I.t -> ('a * I.t) option) -> 'a m
-      val to_fun: 'a m -> (I.t -> ('a * I.t) option)
+    (** run in the *)
+    (* let to_fun: 'a m -> (I.t -> ('a * I.t) option *)
 
-      val get_input: unit -> I.t m
-      val set_input: I.t -> unit m
-    end = struct
-      type 'a m = I.t -> ('a * I.t) option
-
-      let bind (x:'a m) (f:'a -> 'b m) :'b m = 
-        fun s -> x s |> function | None -> None | Some (v,s) -> f v s
-      let ( >>= ) x f = bind x f
-
-      let return x s = Some(x,s)
-
-      let of_fun x = x
-      let to_fun x = x
-
-      let get_input () = fun s -> Some(s,s)
-      let set_input s = fun _ -> Some((),s)
-    end
-
-    open Monad
 
     (** This is not used often; NOTE that there is no bos/longest *)
-    let raw_exec_cre_no_drop : compiled_re -> group m = fun cre -> of_fun (fun i -> 
-      Re.exec_opt cre i |> function
-      | None -> None
-      | Some g -> Some(g,i))
+    let raw_exec_cre_no_drop : compiled_re -> group m = 
+      fun cre -> of_fun (fun i -> 
+          Re.exec_opt cre i |> function
+          | None -> None
+          | Some g -> Some(g,i))
 
-    let raw_exec_cre_and_drop : compiled_re -> (I.t * group) m = fun cre -> of_fun (fun i -> 
-      Re.exec_opt cre i |> function
-      | None -> None
-      | Some g -> 
-        let len = group_stop g in
-        split_at len i |> fun (i1,i2) -> 
-        Some((i1,g),i2))
+    let raw_exec_cre_and_drop : compiled_re -> (I.t * group) m = 
+      fun cre -> of_fun (fun i -> 
+          Re.exec_opt cre i |> function
+          | None -> None
+          | Some g -> 
+            let len = group_stop g in
+            split_at len i |> fun (i1,i2) -> 
+            Some((i1,g),i2))
 
     (** Execute a regular expression and return the matched string;
        uses bos and longest (and group 0 via group_stop) *)
@@ -93,19 +123,20 @@ module Internal = struct
       raw_exec_cre_and_drop cre >>= fun (s,_) -> 
       return s
 
-
-
-    (** An example of how to use regexps with monad FIXME does this match at bos? *)
+    (** An example of how to use regexps with monad FIXME does this
+       match at bos? *)
     let a (lit0:I.t) : I.t m = 
       let lit = compile_bos_longest (literal lit0) in
       raw_exec_cre_and_drop lit >>= fun _ -> 
       return lit0
 
     (** Parse an optional something *)
-    let opt p : 'a m = of_fun (fun i ->
-      match (to_fun p) i with
-      | None -> Some(None,i)
-      | Some (x,i) -> Some(Some x,i))
+    let opt p : 'a m = 
+      Monad.Internal.to_fun p |> fun p ->
+      Monad.Internal.of_fun @@
+      fun t -> p t |> function
+        | None -> Some(None,t)
+        | Some(a,t) ->Some(Some a,t)  
 
     (** Parse one then another; return a pair *)
     let then_ a b = a >>= fun x -> b >>= fun y -> return (x,y)
@@ -155,6 +186,15 @@ module Internal = struct
       (String.sub s 0 n, drop n s)
   end
 
+  module StringIM = struct
+    module I = StringI
+    type t = I.t  (* the monad state is just the input string *)
+    let get_input () = Monad.Internal.of_fun (fun t -> 
+        Some(t,t))
+    let set_input i = Monad.Internal.of_fun (fun _t ->
+        Some((),i))
+  end
+
   module Re_ = struct
     open Re
     type re = Re.t
@@ -173,8 +213,9 @@ module Internal = struct
 
   module Ocaml_re_instance = struct 
     include (struct include StringI end : module type of StringI with type t:=string)
+    include StringIM
     include Re_
-    include Make(StringI)(Re_)
+    include Make(StringI)(StringIM)(Re_)
   end
 
 (*
@@ -182,36 +223,32 @@ sig
   val drop : int -> string -> string
   val len : string -> int
   val split_at : int -> string -> string * string
+  module I = StringI
+  type t = string
+  val get_input : unit -> ('a, 'a) m
+  val set_input : 'a -> (unit, 'b) m
   type re = Re_.re
   type compiled_re = Re_.compiled_re
-  val literal : string -> re
+  val literal : t -> re
   val longest : re -> re
   val compile_bos_longest : re -> compiled_re
   type group = Re_.group
   val group_stop : group -> int
-  val exec_opt : compiled_re -> string -> group option
-  module Monad :
-    sig
-      type 'a m = 'a Make(StringI)(Re_).Monad.m
-      val return : 'a -> 'a m
-      val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
-      val of_fun : (string -> ('a * string) option) -> 'a m
-      val to_fun : 'a m -> string -> ('a * string) option
-      val get_input : unit -> string m
-      val set_input : string -> unit m
-    end
-  val exec_cre_no_drop : compiled_re -> group Monad.m
-  val exec_cre_and_drop : compiled_re -> (string * group) Monad.m
-  val re : re -> string Monad.m
-  val a : string -> string Monad.m
-  val opt : 'a Monad.m -> 'a option Monad.m
-  val then_ : 'a Monad.m -> 'b Monad.m -> ('a * 'b) Monad.m
-  val ( -- ) : 'a Monad.m -> 'b Monad.m -> ('a * 'b) Monad.m
-  val plus : sep:'a Monad.m -> 'b Monad.m -> 'b list Monad.m
-  val star : sep:'a Monad.m -> 'b Monad.m -> 'b list Monad.m
-  val alt : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
-  val ( || ) : 'a Monad.m -> 'a Monad.m -> 'a Monad.m
-  val end_of_string : unit Monad.m
+  val exec_opt : compiled_re -> t -> group option
+  type 'a m = ('a, t) Monad.m
+  val of_fun : (t -> ('a * t) option) -> 'a m
+  val raw_exec_cre_no_drop : compiled_re -> group m
+  val raw_exec_cre_and_drop : compiled_re -> (t * group) m
+  val re : re -> t m
+  val a : t -> t m
+  val opt : ('a, t) Monad.m -> 'a option m
+  val then_ : ('a, 'b) Monad.m -> ('c, 'b) Monad.m -> ('a * 'c, 'b) Monad.m
+  val ( -- ) : ('a, 'b) Monad.m -> ('c, 'b) Monad.m -> ('a * 'c, 'b) Monad.m
+  val plus : sep:('a, t) Monad.m -> ('b, t) Monad.m -> ('b list, t) Monad.m
+  val star : sep:('a, t) Monad.m -> ('b, t) Monad.m -> ('b list, t) Monad.m
+  val alt : ('a, t) Monad.m -> ('a, t) Monad.m -> ('a, t) Monad.m
+  val ( || ) : ('a, t) Monad.m -> ('a, t) Monad.m -> ('a, t) Monad.m
+  val end_of_string : unit m
 end
 *)
 
@@ -219,6 +256,7 @@ end
     val drop : int -> string -> string
     val len : string -> int
     val split_at : int -> string -> string * string
+    type t = string
 
     type re = Re.t (* Re_.re *)
     type compiled_re = Re.re (* Re_.compiled_re *)
@@ -230,7 +268,7 @@ end
     val group_stop : group -> int
     (* val exec_opt : compiled_re -> string -> group option *)
 
-    type 'a m 
+    type 'a m = ('a, t) Monad.m
     val return : 'a -> 'a m
     val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
     val of_fun : (string -> ('a * string) option) -> 'a m
@@ -253,7 +291,12 @@ end
     val alt : 'a m -> 'a m -> 'a m
     val ( || ) : 'a m -> 'a m -> 'a m
     val end_of_string : unit m
-  end = struct include Ocaml_re_instance include Monad end
+  end = struct
+    include Ocaml_re_instance 
+    let ( >>= ) = Monad.( >>= )
+    let return = Monad.return
+    let to_fun = Monad.Internal.to_fun
+  end
 end
 
 include Internal.Export
