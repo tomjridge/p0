@@ -51,9 +51,9 @@ module Internal = struct
   end
 
   (** integrate input with monad *)
-  module type IM = sig
+  module type I_WITH_MONAD = sig
     module I : I
-    type t
+    type t  (* the monad state type *)
     val get_input: unit -> (I.t,t) m
     val set_input: I.t -> (unit,t) m
   end
@@ -79,7 +79,7 @@ module Internal = struct
        about the match *)
   end
 
-  module Make(I:I)(IM:IM with module I:=I)(Re:RE with module I := I) = struct
+  module Make(I:I)(IM:I_WITH_MONAD with module I:=I)(Re:RE with module I:=I) = struct
 
     open I
     open IM
@@ -175,6 +175,17 @@ module Internal = struct
       | 0 -> Some((),i)
       | _ -> None)
 
+    (** NOTE assumes alternatives not empty *)
+    let rec alternatives = function
+      | [] -> failwith "no alternatives"
+      | [x] -> x
+      | x::xs -> x || alternatives xs
+
+    (** NOTE assumes seq not empty *)
+    let rec sequence = function
+      | [] -> failwith __LOC__
+      | [x] -> x >>= fun r -> return [r]
+      | x::xs -> x -- (sequence xs) >>= fun (a,b) -> return (a::b)
   end
 
   module StringI = struct
@@ -253,22 +264,31 @@ end
 *)
 
   module Export : sig
+
+    (** {2 String utils} *)
+
     val drop : int -> string -> string
     val len : string -> int
     val split_at : int -> string -> string * string
-    type t = string
+    (* type t = string *)
 
+
+    (** {2 Regular expressions} *)
+    
     type re = Re.t (* Re_.re *)
-    type compiled_re = Re.re (* Re_.compiled_re *)
+    (* type compiled_re = Re.re (\* Re_.compiled_re *\) *)
     val literal : string -> re
     val longest : re -> re
-    val compile_bos_longest : re -> compiled_re
+    (* val compile_bos_longest : re -> compiled_re *)
 
     type group = Re.Group.t
     val group_stop : group -> int
     (* val exec_opt : compiled_re -> string -> group option *)
 
-    type 'a m = ('a, t) Monad.m
+
+    (** {2 Monad type and ops} *)
+
+    type 'a m = ('a, string) Monad.m
     val return : 'a -> 'a m
     val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
     val of_fun : (string -> ('a * string) option) -> 'a m
@@ -276,12 +296,15 @@ end
     val get_input : unit -> string m
     val set_input : string -> unit m
 
-    val raw_exec_cre_no_drop : compiled_re -> group m
-    val raw_exec_cre_and_drop : compiled_re -> (string * group) m
+    (** {2 Regular expressions and the monad} *)
+
+    (* val raw_exec_cre_no_drop : compiled_re -> group m *)
+    (* val raw_exec_cre_and_drop : compiled_re -> (string * group) m *)
 
     (** The main interface to regular expressions *)
     val re : re -> string m
 
+    (** {2 Standard combinators} *)
     val a : string -> string m
     val opt : 'a m -> 'a option m
     val then_ : 'a m -> 'b m -> ('a * 'b) m
@@ -291,6 +314,8 @@ end
     val alt : 'a m -> 'a m -> 'a m
     val ( || ) : 'a m -> 'a m -> 'a m
     val end_of_string : unit m
+    val alternatives : 'a m list -> 'a m
+    val sequence : 'a m list -> 'a list m
   end = struct
     include Ocaml_re_instance 
     let ( >>= ) = Monad.( >>= )
@@ -303,7 +328,7 @@ include Internal.Export
 
 let upto_a lit = 
   let cre = Re.(shortest (seq [group (rep any); str lit])) |> Re.compile in
-  cre |> raw_exec_cre_no_drop >>= fun g ->
+  cre |> Internal.Ocaml_re_instance.raw_exec_cre_no_drop >>= fun g ->
   Re.Group.get g 1 |> fun s -> 
   (* Printf.printf "upto_a: %s\n%!" s; *)
   get_input () >>= fun i -> drop (String.length s) i |> set_input >>= fun () ->
@@ -315,15 +340,6 @@ let debug ?(msg="") () = of_fun (fun i ->
   Printf.printf "%s %s\n%!" msg i; Some((),i))
 
 
-let rec alternatives = function
-  | [] -> failwith "no alternatives"
-  | [x] -> x
-  | x::xs -> x || alternatives xs
-
-let rec sequence = function
-  | [] -> a"" >>= fun _ -> return []
-  | [x] -> x >>= fun r -> return [r]
-  | x::xs -> x -- (sequence xs) >>= fun (a,b) -> return (a::b)
 
 (** support OCaml's built-in Str regexps *)
 module Str_ = struct
