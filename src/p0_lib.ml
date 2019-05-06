@@ -88,7 +88,7 @@ module Internal = struct
     type 'a m = ('a,t) Monad.m
         
     (** lift a function on inputs to the monad *)
-    let of_fun: (I.t -> ('a*I.t)option) -> 'a m = fun f -> 
+    let _of_fun: (I.t -> ('a*I.t)option) -> 'a m = fun f -> 
       get_input () >>= fun i -> 
       f i |> function
       | None -> fail ()
@@ -102,13 +102,13 @@ module Internal = struct
 
     (** This is not used often; NOTE that there is no bos/longest *)
     let raw_exec_cre_no_drop : compiled_re -> group m = 
-      fun cre -> of_fun (fun i -> 
+      fun cre -> _of_fun (fun i -> 
           Re.exec_opt cre i |> function
           | None -> None
           | Some g -> Some(g,i))
 
     let raw_exec_cre_and_drop : compiled_re -> (I.t * group) m = 
-      fun cre -> of_fun (fun i -> 
+      fun cre -> _of_fun (fun i -> 
           Re.exec_opt cre i |> function
           | None -> None
           | Some g -> 
@@ -170,7 +170,7 @@ module Internal = struct
     let ( || ) = alt       
 
     (** Matches a length-zero remaining input *)
-    let end_of_string = of_fun (fun i -> 
+    let end_of_string = _of_fun (fun i -> 
       match len i with 
       | 0 -> Some((),i)
       | _ -> None)
@@ -223,10 +223,11 @@ module Internal = struct
   end
 
   module Ocaml_re_instance = struct 
-    include (struct include StringI end : module type of StringI with type t:=string)
+    include (struct include StringI end : module type of StringI with type t:=string) (* get rid of type t defn *)
     include StringIM
     include Re_
     include Make(StringI)(StringIM)(Re_)
+
   end
 
 (*
@@ -316,11 +317,26 @@ end
     val end_of_string : unit m
     val alternatives : 'a m list -> 'a m
     val sequence : 'a m list -> 'a list m
+
+    (** {2 Support for OCaml's Str regexp lib *)
+    val str_re : string -> string m
   end = struct
     include Ocaml_re_instance 
+    let of_fun = _of_fun
     let ( >>= ) = Monad.( >>= )
     let return = Monad.return
     let to_fun = Monad.Internal.to_fun
+
+    let str_re (re:string) = 
+      let open Str in
+      let re = Str.regexp re in
+      of_fun (fun s -> 
+          string_match re s 0 |> function
+          | false -> None
+          | true -> matched_string s |> fun mat -> 
+                    Some(mat,drop (String.length mat) s))
+    let _ = str_re
+
   end
 end
 
@@ -338,17 +354,3 @@ let upto_a lit =
 (** debug by showing the input (and an optional msg) *)  
 let debug ?(msg="") () = of_fun (fun i ->
   Printf.printf "%s %s\n%!" msg i; Some((),i))
-
-
-
-(** support OCaml's built-in Str regexps *)
-module Str_ = struct
-  open Str
-  let re (re:string) = 
-    let re = Str.regexp re in
-    of_fun (fun s -> 
-      string_match re s 0 |> function
-      | false -> None
-      | true -> matched_string s |> fun mat -> 
-                Some(mat,drop (String.length mat) s))
-end
