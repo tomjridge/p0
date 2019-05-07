@@ -1,4 +1,4 @@
-open P0_lib
+open P0_lib.P0
 open Bin_prelude
 
 (* grammar of grammars ---------------------------------------------- *)
