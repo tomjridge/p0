@@ -306,6 +306,7 @@ end
     val re : re -> string m
 
     (** {2 Standard combinators} *)
+
     val a : string -> string m
     val opt : 'a m -> 'a option m
     val then_ : 'a m -> 'b m -> ('a * 'b) m
@@ -318,7 +319,8 @@ end
     val alternatives : 'a m list -> 'a m
     val sequence : 'a m list -> 'a list m
 
-    (** {2 Support for OCaml's Str regexp lib *)
+    (** {2 Support for OCaml's Str regexp lib} *)
+
     val str_re : string -> string m
   end = struct
     include Ocaml_re_instance 
@@ -341,6 +343,9 @@ end
 end
 
 include Internal.Export
+
+
+(** {2 Misc, specific to string monad? FIXME} *)
 
 let upto_a lit = 
   let cre = Re.(shortest (seq [group (rep any); str lit])) |> Re.compile in
