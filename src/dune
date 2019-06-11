@@ -1,6 +1,6 @@
 (library
   (public_name p0_lib)
-  (libraries re str))
+  (libraries re))
 
 ;; 
 ;; (executable

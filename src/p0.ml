@@ -341,7 +341,7 @@ end
 
     (** {2 Support for OCaml's Str regexp lib} *)
 
-    val str_re : string -> string m
+    (* val str_re : string -> string m *)
   end = struct
     include Ocaml_re_instance 
     let of_fun = _of_fun
@@ -349,6 +349,7 @@ end
     let return = Monad.return
     let to_fun = Monad.Internal.to_fun
 
+(*
     let str_re (re:string) = 
       let open Str in
       let re = Str.regexp re in
@@ -358,6 +359,7 @@ end
           | true -> matched_string s |> fun mat -> 
                     Some(mat,drop (String.length mat) s))
     let _ = str_re
+*)
 
   end
 end
@@ -367,6 +369,7 @@ include Internal.Export
 
 (** {2 Misc, specific to string monad? FIXME} *)
 
+(** this parses upto and including ??? FIXME *)
 let upto_a lit = 
   let cre = Re.(shortest (seq [group (rep any); str lit])) |> Re.compile in
   cre |> Internal.Ocaml_re_instance.raw_exec_cre_no_drop >>= fun g ->
