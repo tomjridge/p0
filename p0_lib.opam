@@ -9,6 +9,8 @@ maintainer: "Tom Ridge <tom.j.ridge@googlemail.com>"
 # ----------------------------------------------------------------------
 
 depends: [
+  "ppx_jane"  # for sexp_conv
+  "core_kernel" # for sexplib
   "re"
 ]
 
