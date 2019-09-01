@@ -1,4 +1,4 @@
-# p0: a simple parsing library
+# p0: a simple combinator parsing library
 
 ## Introductory example (CSV parser)
 

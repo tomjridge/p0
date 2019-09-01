@@ -1,10 +1,15 @@
-opam-version: "1.2"
-name: "p0_lib"
-version: "0.0.1" # version should match a VERSION file in this dir?
+opam-version : "2.0"
+name         : "p0_lib"
+version      : "0.0.1" # version should match a VERSION file in this dir?
+synopsis     : "p0: a simple combinator parsing library"
 
 # ----------------------------------------------------------------------
 
-maintainer: "Tom Ridge <tom.j.ridge@googlemail.com>"
+maintainer   : "Tom Ridge <tom.j.ridge@googlemail.com>"
+authors      : "Tom Ridge <tom.j.ridge@googlemail.com>"
+homepage     : "https://github.com/tomjridge/p0"
+bug-reports  : "https://github.com/tomjridge/p0/issues"
+dev-repo     : "git+https://github.com/tomjridge/p0.git"
 
 # ----------------------------------------------------------------------
 

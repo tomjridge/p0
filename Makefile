@@ -3,13 +3,17 @@ SHELL:=bash
 build:
 	dune build @install
 	dune build bin/p0_example.exe
-	dune exec bin/p0_example.exe
 #	dune build src/re_test.exe
 #	_build/default/src/re_test.exe
 #	dune build bin/p0_example.exe
 
 install:
 	dune install
+
+all:
+	$(MAKE) build
+	$(MAKE) install
+	$(MAKE) run_example
 
 run_example:
 	dune exec bin/p0_example.exe
