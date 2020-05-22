@@ -175,7 +175,7 @@ module Internal = struct
     let ( || ) = alt       
 
     (** Repeat, with optional min/max bounds *)
-    let rep ?(min=0) ?(max=Pervasives.max_int) (p: 'a m) : 'a list m = 
+    let rep ?(min=0) ?(max=Stdlib.max_int) (p: 'a m) : 'a list m = 
       let rec rep (min,max,acc) =
         match max with 
         | 0 -> eps >>= fun () -> return acc
