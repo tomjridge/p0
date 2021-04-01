@@ -1,5 +1,11 @@
 (executable
-  (public_name p0_example)
-  (flags (:standard -w -27-8-40-32-39))
-  (preprocess (pps ppx_sexp_conv))
-  (libraries core_kernel ppx_sexp_conv p0_lib))
+ (public_name p0_example)
+ (flags (:standard -w -27-8-40-32-39))
+ (preprocess (pps ppx_sexp_conv))
+ (modules Bin_prelude Bin_util P0_example)
+ (libraries core_kernel ppx_sexp_conv p0_lib))
+
+(executable
+ (public_name test_2021)
+ (modules Test_2021)
+ (libraries p0_lib))
