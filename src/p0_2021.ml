@@ -6,22 +6,27 @@ Return at most 1 parse at each point (so, alternatives are ordered,
 A rewrite of 2017 version. *)
 
 
+(* from Tjr_lib_core.Iter *)
+let iter_k f (x:'a) =
+  let rec k x = f ~k x in
+  k x
+
 type state = {
   init_input : string;
   len        : int; (* of init_input *)
   i          : int;
   debug      : bool;
-  mutable max: int; (* debug: this is the max i reached; updated in bind *)
+  max        : int ref;  (* debug: this is the max i reached; updated in bind *)
 }
 
-let update_max s = s.max <- max s.max s.i
+let update_max s = s.max := max !(s.max) s.i; s
 
 let string_to_state ~debug s = {
   init_input = s;
   len        = String.length s;
   i          = 0;
   debug;
-  max        = 0;
+  max        = ref 0;
 }
 
 module M : sig
@@ -40,8 +45,8 @@ end = struct
     fun t -> a t |> function
       | None -> None
       | Some (a,t) ->
-        update_max t;
-        ab a t
+        ignore(update_max t);
+        ab a t 
   let ( >>= ) = bind
 
   let run x s = x s
@@ -52,13 +57,15 @@ end
 open M
 
 let parse ~debug p s = 
-  run p (string_to_state ~debug s) |> function
+  let s = string_to_state ~debug s in 
+  run p s |> fun v -> 
+  match v with
   | None -> None
   | Some(v,s) -> 
-    if s.debug then begin             
-      Printf.printf "run: max posn reached: %d; " s.max;
+    if debug then begin             
+      Printf.printf "run: max posn reached: %d; " !(s.max);
       Printf.printf "at that posn: %s\n" 
-        (String.sub s.init_input s.max (s.len - s.max))
+        (String.sub s.init_input !(s.max) (s.len - !(s.max)))
     end;
     Some v  (* NOTE not all the input need be consumed *)
 
@@ -83,14 +90,28 @@ let get_substring len : string m =
 let skip n = 
   get_state () >>= fun s -> 
   assert(s.i + n <= s.len);
-  set_state {s with i=s.i+n}
+  set_state (update_max {s with i=s.i+n})
 
-
-let a s = 
+(* FIXME creates a substring *)
+let _a s = 
   get_substring (String.length s) >>= fun s' -> 
   match s=s' with
   | true -> skip (String.length s)
   | false -> fail ()
+
+(** This version does not allocate substrings *)
+let a s = inject @@ fun st -> 
+  let len_s = String.length s in
+  match st.i + len_s <= st.len && 
+        (0 |> iter_k (fun ~k n -> 
+             match n >= len_s with
+             | true -> true
+             | false -> 
+               (String.get s n = String.get st.init_input (st.i+n)) &&
+               k (n+1)))
+  with
+  | true -> Some (s,update_max {st with i=st.i+len_s})
+  | false -> None
     
 let eps = a ""
 
@@ -121,7 +142,7 @@ module Re_ = struct
   let exec re = inject @@ fun s -> 
     exec_opt_s ~pos:s.i re s.init_input |> function
     | None -> None
-    | Some mtch -> Some (mtch, {s with i=s.i+(String.length mtch)})
+    | Some mtch -> Some (mtch, update_max {s with i=s.i+(String.length mtch)})
 
   (** Parser, returns matching group; doesn't advance the position *)
   let exec_g re : Re.Group.t m = inject @@ fun s ->    
@@ -167,19 +188,6 @@ let rep p =
   in
   f []
 
-let list ~sep p = 
-  opt p >>= function
-  | None -> return []
-  | Some x -> 
-    let rec f acc = 
-      opt (then_ sep p) >>= function
-      | None -> return (List.rev acc)
-      | Some (_,x) -> f (x::acc)
-    in
-    f [x]
-
-let _ : sep:'a m -> 'b m -> 'b list m = list
-
 (** This variant returns the matching seps as well *)
 let list_with_sep ~sep p = 
   opt p >>= function
@@ -189,6 +197,15 @@ let list_with_sep ~sep p =
       return (`Not_empty(x,xs))
 
 let _ : sep:'a m -> 'b m -> [`Empty | `Not_empty of 'b * ('a * 'b) list ] m = list_with_sep
+
+(** This variant does not return the seps *)
+let list ~sep p = 
+  list_with_sep ~sep p >>= function
+  | `Empty -> return []
+  | `Not_empty (x,ys) -> return (x::(List.map snd ys))
+
+let _ : sep:'a m -> 'b m -> 'b list m = list
+
     
 let upto_a lit = 
   let re = Re.(shortest (seq [group (rep any); str lit]) |> compile) in
@@ -215,6 +232,8 @@ module Test() = struct
 
   let _ = 
     Printf.printf "%s: testing ... " __MODULE__;  
+    assert(parse ~debug (a "hello") "hello" = Some "hello");
+    assert(parse ~debug (a "") "hello" = Some "");
     assert(parse ~debug list_of_num "[]" = Some []);
     assert(parse ~debug list_of_num "[1]" = Some [1]);
     assert(parse ~debug list_of_num "[123]" = Some [123]);
