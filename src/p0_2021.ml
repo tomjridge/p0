@@ -171,7 +171,13 @@ let alt a b =
   | None -> b
   | Some x -> return x
 
-let end_of_string = inject @@ fun s -> 
+let rec alt_list xs = 
+  match xs with
+  | [] -> fail ()
+  | x::xs -> 
+    alt x (alt_list xs)
+
+let end_of_input = inject @@ fun s -> 
   match s.i = s.len with 
   | true -> Some((),s)
   | false -> None
@@ -214,6 +220,18 @@ let upto_a lit =
   skip (String.length s) >>= fun () -> 
   return s
 
+let any_of xs = alt_list (List.map a xs)
+
+let any_but xs = 
+  let re = Re.(shortest (seq [group (rep any); alt (List.map str xs)]) |> compile) in
+  Re_.exec_g re >>= fun g ->
+  Re.Group.get g 1 |> fun s -> 
+  skip (String.length s) >>= fun () -> 
+  return s
+
+let ws = exec Re.(compile (set "\t \n"))
+
+let ws_nnl = exec Re.(compile (set "\t "))
 
 
 module Test() = struct
