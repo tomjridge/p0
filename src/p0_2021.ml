@@ -198,6 +198,68 @@ let rec seq_list xs =
   | [x] -> x >>= fun v -> return [v]
   | x::xs -> x >>= fun v -> seq_list xs >>= fun vs -> return (v::vs)
 
+(** The variants seq3 etc allow more accurate typing than seq_list *)
+let seq3 (p,q,r) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> return (x,y,z)
+
+let seq4 (p,q,r,m) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  return (x,y,z,z')
+
+let seq5 (p, q, r, m, n) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  n >>= fun z'' -> 
+  return (x,y,z,z',z'')
+
+let seq6 (p, q, r, m, n, o) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  n >>= fun z'' -> 
+  o >>= fun z''' -> 
+  return (x,y,z,z',z'',z''')
+
+let seq7 (p, q, r, m, n, o, i) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  n >>= fun z'' -> 
+  o >>= fun z''' -> 
+  i >>= fun z4 -> 
+  return (x,y,z,z',z'',z''',z4)
+
+let seq8 (p, q, r, m, n, o, i, j) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  n >>= fun z'' -> 
+  o >>= fun z''' -> 
+  i >>= fun z4 -> 
+  j >>= fun z5 ->   
+  return (x,y,z,z',z'',z''',z4,z5)
+
+let seq9 (p, q, r, m, n, o, i, j, k) = 
+  p >>= fun x -> 
+  q >>= fun y -> 
+  r >>= fun z -> 
+  m >>= fun z' -> 
+  n >>= fun z'' -> 
+  o >>= fun z''' -> 
+  i >>= fun z4 -> 
+  j >>= fun z5 ->   
+  k >>= fun z6 ->   
+  return (x,y,z,z',z'',z''',z4,z5,z6)
 
 (** Repetition *)
 let rep p = 
