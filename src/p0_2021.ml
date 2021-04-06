@@ -54,7 +54,7 @@ end = struct
   let inject f = f
   let fail () = fun _s -> None
 end
-open M
+include M
 
 let parse ~debug p s = 
   let s = string_to_state ~debug s in 
@@ -78,7 +78,7 @@ let set_state s = inject @@ fun _ -> Some((),s)
 (** Modify a parser so that it prints a message and the position in
    the input that has been reached before it tries to parse *)
 let debug ~msg p = inject @@ fun s -> 
-  Printf.printf "%s: %d\n" msg s.i;
+  msg s;
   run p s
 
 (* may return < len chars *)
@@ -118,7 +118,11 @@ let eps = a ""
 
 (** Link to ocaml-re; we need to match against a string from a certain
    position. This is a thin layer over ocaml-re. NOTE: you can use
-   everything in Re in addition to the following. *)
+   everything in Re in addition to the following. NOTE: Re searches
+   from the given position in the string; thus, the first match may
+   not start at the given position in the string. But we require that
+   it does start at that position. So we explicitly add "beginning of
+   string". *)
 module Re_ = struct
   type t = Re.t (* not compiled *)
   type re = Re.re (* compiled *)
@@ -152,7 +156,7 @@ module Re_ = struct
 
   (* Alternative literal matching; surely this can't be faster than
      direct string comparison? *)
-  let a s = Re.str s |> compile |> exec
+  let a s = Re.(seq [start;str s]) |> compile |> exec
 end
 
 let exec re : string m = Re_.exec re
@@ -185,6 +189,16 @@ let end_of_input = inject @@ fun s ->
 (** Parse one then another; return a pair *)
 let then_ a b = a >>= fun x -> b >>= fun y -> return (x,y)
 
+(** seq is just then_ *)
+let seq = then_
+
+let rec seq_list xs = 
+  match xs with 
+  | [] -> fail ()
+  | [x] -> x >>= fun v -> return [v]
+  | x::xs -> x >>= fun v -> seq_list xs >>= fun vs -> return (v::vs)
+
+
 (** Repetition *)
 let rep p = 
   let rec f acc = 
@@ -214,29 +228,36 @@ let _ : sep:'a m -> 'b m -> 'b list m = list
 
     
 let upto_a lit = 
-  let re = Re.(shortest (seq [group (rep any); str lit]) |> compile) in
+  let re = Re.(shortest (seq [start; group (rep any); str lit]) |> compile) in
   Re_.exec_g re >>= fun g ->
   Re.Group.get g 1 |> fun s -> 
   skip (String.length s) >>= fun () -> 
   return s
 
+(** Parse one of the given literals *)
 let any_of xs = alt_list (List.map a xs)
 
-let any_but xs = 
-  let re = Re.(shortest (seq [group (rep any); alt (List.map str xs)]) |> compile) in
+(** Parse until reaching one of the given literals *)
+let rep_any_but xs = 
+  let re = Re.(shortest (seq [start; group (rep any); alt (List.map str xs)]) |> compile) in
   Re_.exec_g re >>= fun g ->
   Re.Group.get g 1 |> fun s -> 
   skip (String.length s) >>= fun () -> 
   return s
 
-let ws = exec Re.(compile (set "\t \n"))
+(** Whitespace; may be empty *)
+let ws = exec Re.(compile (seq [start; rep (set "\t \n")]))
 
-let ws_nnl = exec Re.(compile (set "\t "))
+(** Whitespace; not empty *)
+let ws1 = exec Re.(compile (seq [start; rep1 (set "\t \n")]))
+
+(** Whitespace; may be empty; no new lines *)
+let ws_nnl = exec Re.(compile (seq [start; rep (set "\t ")]))
 
 
 module Test() = struct
 
-  let num = exec Re.(compile (longest (rep1 digit)))
+  let num = exec Re.(compile (seq [start; longest (rep1 digit)]))
 
   let num = num >>= fun s -> return (int_of_string s)
 
@@ -248,8 +269,17 @@ module Test() = struct
 
   let debug=true
 
+  let p_starts_with_upper = exec Re.(seq [start; rg 'A' 'Z';longest (rep alnum)] |> compile)
+
   let _ = 
     Printf.printf "%s: testing ... " __MODULE__;  
+    assert(parse ~debug p_starts_with_upper "[" = None);
+    assert(parse ~debug p_starts_with_upper "['-'] integerLiteral" = None);
+    assert(parse ~debug ws "h" = Some "");
+    assert(parse ~debug ws1 "h" = None);
+    assert(parse ~debug ws "" = Some "");
+    assert(parse ~debug ws " " = Some " ");
+    assert(parse ~debug ws "  " = Some "  ");
     assert(parse ~debug (a "hello") "hello" = Some "hello");
     assert(parse ~debug (a "") "hello" = Some "");
     assert(parse ~debug list_of_num "[]" = Some []);
