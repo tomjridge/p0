@@ -7,13 +7,14 @@ homepage: "https://github.com/tomjridge/p0"
 doc: "https://tomjridge.github.io/ocamldocs/p0"
 bug-reports: "https://github.com/tomjridge/p0/issues"
 depends: [
-  "dune" {>= "2.0"}
+  "dune" {>= "2.8"}
   "ppx_jane"
   "core_kernel"
   "re"
+  "odoc" {with-doc}
 ]
 build: [
-  ["dune" "subst"] {pinned}
+  ["dune" "subst"] {dev}
   [
     "dune"
     "build"

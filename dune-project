@@ -1,5 +1,5 @@
-(lang dune 2.0)
-(name p0_lib)
+(lang dune 2.8)
+(name p0_lib) ; project name
 
 ;; for opam
 (authors              "Tom Ridge <tom.j.ridge@googlemail.com>")
@@ -11,7 +11,7 @@
 
 
 (package 
- (name p0_lib)
+ (name p0_lib) ; package name
  (synopsis "p0: a simple combinator parsing library")
  (depends ppx_jane core_kernel re
 ))
