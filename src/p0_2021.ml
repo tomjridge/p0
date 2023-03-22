@@ -334,7 +334,7 @@ module Test() = struct
   let p_starts_with_upper = exec Re.(seq [start; rg 'A' 'Z';longest (rep alnum)] |> compile)
 
   let _ = 
-    Printf.printf "%s: testing ... " __MODULE__;  
+    Printf.printf "%s: testing ...\n" __MODULE__;  
     assert(parse ~debug p_starts_with_upper "[" = None);
     assert(parse ~debug p_starts_with_upper "['-'] integerLiteral" = None);
     assert(parse ~debug ws "h" = Some "");
