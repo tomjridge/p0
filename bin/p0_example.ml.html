@@ -164,7 +164,7 @@ span.governing a { color: #000000;  font-weight: 700;  font-family: Ubuntu Mono;
 
 <span class="doc">(** This just to avoid type var error msgs *)</span>
 <span class="governing">module</span> <span class="module">Grammar_type</span> <span class="operator">=</span> <span class="governing">struct</span>
-  <span class="governing">open </span><span class="module">Core_kernel</span>
+  <span class="governing">open </span><span class="module">Core</span>
   <span class="governing">type</span> <span class="type">nt</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">type</span> <span class="type">tm</span> <span class="operator">=</span> <span class="constructor">Tm_lit</span> <span class="keyword">of</span> <span class="operator">(</span>string <span class="operator">*</span> string <span class="operator">*</span> string<span class="operator">)</span> <span class="operator">|</span> <span class="constructor">Tm_qu</span> <span class="keyword">of</span> string <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
   <span class="governing">type</span> <span class="type">sym</span> <span class="operator">=</span> <span class="constructor">Nt</span> <span class="keyword">of</span> nt <span class="operator">|</span> <span class="constructor">Tm</span> <span class="keyword">of</span> tm <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
@@ -173,14 +173,14 @@ span.governing a { color: #000000;  font-weight: 700;  font-family: Ubuntu Mono;
   <span class="governing">type</span> <span class="type">grammar</span> <span class="operator">=</span> rule list <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
 
   <span class="governing">let</span> <span class="function-name">grammar_to_string</span><span class="variable-name"> g</span> <span class="operator">=</span> 
-    g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+    g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core.Sexp.</span>to_string_hum 
 <span class="governing">end</span>
 <span class="governing">let</span> <span class="variable-name">grammar_to_string</span> <span class="operator">=</span> <span class="module">Grammar_type.</span>grammar_to_string
 
 <span class="doc">(** Make pretty-printing slightly more human by omitting some brackets *)</span>
 <span class="governing">module</span> <span class="module">Grammar_human</span> <span class="operator">=</span> <span class="governing">struct</span>
   <span class="governing">include</span> <span class="governing">struct</span> 
-    <span class="governing">open </span><span class="module">Core_kernel</span>
+    <span class="governing">open </span><span class="module">Core</span>
     <span class="governing">type</span> <span class="type">nt</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp</span><span class="attribute">]</span>
     <span class="governing">type</span> <span class="type">sym</span> <span class="operator">=</span> string <span class="attribute">[@@deriving sexp]</span>
     <span class="governing">type</span> <span class="type">rhs</span> <span class="operator">=</span> sym list <span class="attribute">[@@deriving sexp]</span>
@@ -203,7 +203,7 @@ span.governing a { color: #000000;  font-weight: 700;  font-family: Ubuntu Mono;
 
   <span class="comment-delimiter">(* </span><span class="comment">but strings with quotes are still double quoted </span><span class="comment-delimiter">*)</span>
 
-  <span class="governing">let</span> <span class="function-name">grammar_to_string</span><span class="variable-name"> g</span> <span class="operator">=</span> of_grammar g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum
+  <span class="governing">let</span> <span class="function-name">grammar_to_string</span><span class="variable-name"> g</span> <span class="operator">=</span> of_grammar g <span class="operator">|&gt;</span> sexp_of_grammar <span class="operator">|&gt;</span> <span class="module">Core.Sexp.</span>to_string_hum
 <span class="governing">end</span>
 <span class="governing">let</span> <span class="variable-name">grammar_to_string</span> <span class="operator">=</span> <span class="module">Grammar_human.</span>grammar_to_string
 
@@ -600,14 +600,14 @@ sys	0m0.027s
 <span class="comment-delimiter">(* </span><span class="comment">NOTE the notion of precedence is here: a times is &quot;upto&quot; a non-times + </span><span class="comment-delimiter">*)</span>
 
 <span class="governing">module</span> <span class="module">Arith_type</span> <span class="operator">=</span> <span class="governing">struct</span>
-  <span class="governing">open </span><span class="module">Core_kernel</span>
+  <span class="governing">open </span><span class="module">Core</span>
   <span class="governing">type</span> <span class="type">arith</span> <span class="operator">=</span> 
       <span class="constructor">Times</span> <span class="keyword">of</span> arith list
     <span class="operator">|</span> <span class="constructor">Plus</span> <span class="keyword">of</span> arith list
     <span class="operator">|</span> <span class="constructor">Atomic</span> <span class="keyword">of</span> atomic  <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">and</span> <span class="variable-name">atomic</span> <span class="operator">=</span> <span class="constructor">Int</span> <span class="keyword">of</span> int <span class="operator">|</span> <span class="constructor">Bracket</span> <span class="keyword">of</span> arith <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">let</span> <span class="function-name">arith_to_string</span><span class="variable-name"> x</span> <span class="operator">=</span> 
-    x <span class="operator">|&gt;</span> sexp_of_arith <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+    x <span class="operator">|&gt;</span> sexp_of_arith <span class="operator">|&gt;</span> <span class="module">Core.Sexp.</span>to_string_hum 
 <span class="governing">end</span>
 
 <span class="governing">let</span> <span class="variable-name">arith_to_string</span> <span class="operator">=</span> <span class="module">Arith_type.</span>arith_to_string
@@ -689,12 +689,12 @@ sys	0m0.027s
 <span class="governing">open </span><span class="module">P</span>
 
 <span class="governing">module</span> <span class="module">Csv_type</span> <span class="operator">=</span> <span class="governing">struct</span>
-  <span class="governing">open </span><span class="module">Core_kernel</span>      
+  <span class="governing">open </span><span class="module">Core</span>      
   <span class="governing">type</span> <span class="type">field</span> <span class="operator">=</span> <span class="constructor">Q</span> <span class="keyword">of</span> string <span class="operator">|</span> <span class="constructor">U</span> <span class="keyword">of</span> string <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">type</span> <span class="type">row</span> <span class="operator">=</span> field list <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">type</span> <span class="type">csv</span> <span class="operator">=</span> row list <span class="attribute">[@@deriving sexp]</span>
   <span class="governing">let</span> <span class="function-name">csv_to_string</span><span class="variable-name"> x</span> <span class="operator">=</span>
-    x <span class="operator">|&gt;</span> sexp_of_csv <span class="operator">|&gt;</span> <span class="module">Core_kernel.Sexp.</span>to_string_hum 
+    x <span class="operator">|&gt;</span> sexp_of_csv <span class="operator">|&gt;</span> <span class="module">Core.Sexp.</span>to_string_hum 
 <span class="governing">end</span>
 
 <span class="governing">open </span><span class="module">Csv_type</span>

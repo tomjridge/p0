@@ -1,7 +1,7 @@
 (library
   (name p0_lib) ; library real name
   (public_name p0_lib) 
-  (libraries re))
+  (libraries re unix))
 
 ;; 
 ;; (executable

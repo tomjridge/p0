@@ -4,7 +4,7 @@ let _3 ((x1,x2),x3) = (x1,x2,x3)
 (** For pretty-printing *)
 module Internal = struct
   module Grammar_type = struct
-    open Core_kernel
+    open Core
     type nt = string [@@deriving sexp]
     type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
     type sym = Nt of nt | Tm of tm [@@deriving sexp]
@@ -13,14 +13,14 @@ module Internal = struct
     type grammar = rule list [@@deriving sexp]
 
     let grammar_to_string g = 
-      g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
+      g |> sexp_of_grammar |> Core.Sexp.to_string_hum 
   end
   let grammar_to_string = Grammar_type.grammar_to_string
 
   (** Make pretty-printing slightly more human by omitting some brackets *)
   module Grammar_human = struct
     include struct 
-      open Core_kernel
+      open Core
       type nt = string [@@deriving sexp]
       type sym = string [@@deriving sexp]
       type rhs = sym list [@@deriving sexp]
@@ -43,7 +43,7 @@ module Internal = struct
 
     (* but strings with quotes are still double quoted *)
 
-    let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum
+    let grammar_to_string g = of_grammar g |> sexp_of_grammar |> Core.Sexp.to_string_hum
   end
   let grammar_to_string = Grammar_human.grammar_to_string
 end
@@ -51,12 +51,12 @@ end
 
 (** For pretty-printing *)
 module Arith_type = struct
-  open Core_kernel
+  open Core
   type arith = 
       Times of arith list
     | Plus of arith list
     | Atomic of atomic  [@@deriving sexp]
   and atomic = Int of int | Bracket of arith [@@deriving sexp]
   let arith_to_string x = 
-    x |> sexp_of_arith |> Core_kernel.Sexp.to_string_hum 
+    x |> sexp_of_arith |> Core.Sexp.to_string_hum 
 end

@@ -453,12 +453,12 @@ open R
 
 (** For pretty-printing *)
 module Csv_type = struct
-  open Core_kernel      
+  open Core      
   type field = Q of string | U of string [@@deriving sexp]
   type row = field list [@@deriving sexp]
   type csv = row list [@@deriving sexp]
   let csv_to_string x =
-    x |> sexp_of_csv |> Core_kernel.Sexp.to_string_hum 
+    x |> sexp_of_csv |> Core.Sexp.to_string_hum 
 end
 
 open Csv_type
